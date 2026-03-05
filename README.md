@@ -23,81 +23,136 @@ Backend API untuk aplikasi Electric Menu menggunakan Express dan PostgreSQL.
 
 ---
 
-<!-- ## Installation
-
-Clone repository:
-
-````bash
-git clone https://github.com/USERNAME/REPO_NAME.git
-
-Install dependencies:
-
-```bash
-npm install
-```` -->
-
-<!-- ---
-
-## Environment Setup
-
-Copy env file:
-
-```bash
-cp .env.copy .env
-```
-
-Lalu isi sesuai konfigurasi kamu.
-
-Contoh:
-
-```env
-PORT=3000
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_NAME=electric_menu
-JWT_SECRET=your_secret
-```
-
----
-
-## Run Project
-
-Development:
-
-```bash
-npm run dev
-```
-
-Production:
-
-```bash
-npm start
-```
-
-Server akan berjalan di:
-
-```
-http://localhost:3000
-```
-
---- -->
-
 ## API Endpoints
 
 ### Auth
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
+**POST** - `POST /api/auth/register-admin`
 
-### Shop
+### Request Body
+
+{
+"name" : "John Doe",
+"email": "youremail@gmail.com",
+"password": "Password123!"
+}
+
+### Response
+
+{
+"message": "Admin successfully registered",
+"name": "John Doe",
+"email": "youremail@gmail.com"
+}
+
+**POST** - `POST /api/auth/register-user`
+
+### Request Body
+
+{
+"name" : "John Doe",
+"email": "youremail@gmail.com",
+"password": "Password123!"
+}
+
+### Response
+
+{
+"message": "User successfully registered",
+"name": "John Doe",
+"email": "youremail@gmail.com"
+}
+
+**POST** - `POST /api/auth/verify-otp`
+
+### Request Body
+
+{
+"email": "youremail@gmail.com",
+"otp": 1111
+}
+
+### Response
+
+{
+"message": "Email verified successfully"
+}
+
+**POST** - `POST /api/auth/resend-otp`
+
+### Request Body
+
+{
+"email": "youremail@gmail.com"
+}
+
+### Response
+
+{
+"message": "OTP resent successfully"
+}
+
+**POST** - `POST /api/auth/reset-password-otp`
+
+### Request Body
+
+{
+"email": "youremail@gmail.com"
+}
+
+### Response
+
+{
+"message": "OTP sent to email"
+}
+
+**PATCH** - `PATCH /api/auth/reset-password`
+
+### Request Body
+
+{
+"email": "youremail@gmail.com",
+"otp": 1111,
+"password": "Password123!",
+"confirmPassword": "Password123!"
+}
+
+### Response
+
+{
+"message": "Password successfully changed"
+}
+
+**POST** - `POST /api/auth/login`
+
+### Request Body
+
+{
+"email": "youremail@gmail.com",
+"password": "Password123!"
+}
+
+### Response
+
+{
+"message": "Login successful",
+"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjsada17bWFpbCI6ImFuZ2dhc2lhZ2lhbjE3QGdtYWlsLmNvbSIsInJvbGVfaWQiOjEsImlhdCI6MTc3MjcxNDAzMSwiZXhwIjoxNzcyNzE3NjMxLCJpc3MiOi1WaR1sda1hcGkifQ.92p2aSeMGarEiLSsGVZV7Dgdhxy7osVm0As0f77Bjlg",
+"emailVerified": true,
+"user": {
+"name": "John Doe",
+"email": "youremail@gmail.com",
+"role_id": 1
+}
+}
+
+<!-- ### Shop
 
 - `GET /api/shop/:slug/products`
 
 ### Product
 
 - `GET /api/product/allProduct`
-- `POST /api/product/create-product`
+- `POST /api/product/create-product` -->
 
 ---
 
@@ -105,13 +160,17 @@ http://localhost:3000
 
 ```
 backend/
-├── config/
-├── controllers/
-├── middleware/
-├── routes/
-├── utils/
-├── qr/
-├── index.js
+├── src/
+    ├── config/
+    ├── controllers/
+    ├── middleware/
+    ├── routes/
+    ├── models/
+    └── utils/
+├── uploads/
+    ├──product_image/
+    └──qr_image/
+├── server.js
 └── package.json
 ```
 

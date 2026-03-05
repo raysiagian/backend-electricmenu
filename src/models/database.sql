@@ -15,6 +15,10 @@ create table users(
 	name varchar(255) not null,
 	email varchar(255) not null unique,
 	password text not null,
+	otp_code VARCHAR(10),
+	otp_expired TIMESTAMP,
+	email_verified BOOLEAN DEFAULT FALSE,
+	last_otp_request TIMESTAMP,
 	CONSTRAINT fk_users_role
         FOREIGN KEY (role_id)
         REFERENCES roles(id)

@@ -29,6 +29,7 @@ Thumbs.db
 .idea/
 
 #others
+notes.txt
 
 # qr uploads
 qr/*
