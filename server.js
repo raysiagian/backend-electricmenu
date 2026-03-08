@@ -4,15 +4,17 @@ dotenv.config();
 import express from "express";
 import pool from "./src/config/db.js"
 
+
 // routes
 import authRoutes from "./src/routes/auth-routes.js"
+import shopRoutes from "./src/routes/shop-routes.js"
 
 const app = express();
 const port = 3000;
 const baseURL = `http://localhost:${port}`
 
 app.use(express.json())
-
+app.use("/qr", express.static("uploads/qr_image"));
 // check connectivity
 pool.connect()
     .then(() => {
@@ -35,6 +37,7 @@ app.get("/", async (req, res) => {
 
 // api routes
 app.use("/api/auth/", authRoutes);
+app.use("/api/shop/", shopRoutes);
 
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
