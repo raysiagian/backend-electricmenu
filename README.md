@@ -145,16 +145,55 @@ Backend API untuk aplikasi Electric Menu menggunakan Express dan PostgreSQL.
 }
 }
 
-<!-- ### Shop
+### Shop
 
-- `GET /api/shop/:slug/products`
+**POST** - `POST /api/shop/create-shop`
 
-### Product
+### Request Body
+
+{
+"email": "youremail@gmail.com",
+"password": "Password123!"
+}
+
+### Authorization
+
+Bearer Token : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjE4LCJlbWFpbCI6InJheXNpYWdpYW43QGdtYWlsLmNvbSIsInJvbGVfaWQiOjIsImlhdCI6MTc3Mjc3NTYxOCwiZXhwIjoxNzcyNzc5MjE4LCJpc3MiOiJlbWVudS1hcGkifQ.YqeoXx2v4TQbEe06jzB7s4t5lrjPpbE1CyvpkYfXVlc
+
+### Response
+
+{
+"message": "Shop create sucessfully",
+"shop": {
+"shop_name": "Your Shop",
+"shop_slug": "your-shop-6b86b273",
+"qr_url": "http://BASE_URL/qr/your-shop-6b86b273.png"
+}
+}
+
+**GET** - `POST /api/shop/:id`
+
+### Authorization
+
+Bearer Token : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjE4LCJlbWFpbCI6InJheXNpYWdpYW43QGdtYWlsLmNvbSIsInJvbGVfaWQiOjIsImlhdCI6MTc3Mjc3NTYxOCwiZXhwIjoxNzcyNzc5MjE4LCJpc3MiOiJlbWVudS1hcGkifQ.YqeoXx2v4TQbEe06jzB7s4t5lrjPpbE1CyvpkYfXVlc
+
+### Response
+
+{
+"shop": {
+"id": 1,
+"shop_name": "Your Shop",
+"shop_slug": "your-shop-6b86b273",
+"qr_url": "http://localhost:3000/qr/your-shop-6b86b273.png"
+}
+}
+
+<!-- ### Product
 
 - `GET /api/product/allProduct`
 - `POST /api/product/create-product` -->
 
----
+-->
 
 ## Folder Structure
 
