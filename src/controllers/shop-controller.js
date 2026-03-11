@@ -1,4 +1,4 @@
-import { createShopService, editShopService, getShopService, getShopPublicService, deleteShopService } from "../services/shop-service.js"
+import { createShopService, editShopService, getShopService, getShopPublicService,searchShopbyUserIDService, deleteShopService,searchShopAdminService, getShopByShopIDAdminService, getAllShopAdminService } from "../services/shop-service.js"
 
 
 // private
@@ -28,8 +28,9 @@ export const searchShopbyUserID = async (req, res) => {
         })
 
         return res.status(200).json({
-            message: "Shop create sucessfully",
-            shop: result.shop
+            message: "Shops retrieved successfully",
+            shops: result.shops,
+            pagination: result.pagination
         })
 
     } catch (err) {
@@ -140,6 +141,86 @@ export const getShopPublic = async (req, res) => {
         const {shop_slug} = req.params
 
         const result = await getShopPublicService ({shop_slug})
+
+        return res.status(200).json({
+            shop: result.shop
+        });
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}
+
+
+// admin
+
+// search shop
+// searching all shop that have been created
+export const searchShopAdmin = async (req, res) => {
+    try {
+        
+        const role_id = req.user.role_id;
+        
+        const {
+            search = "",
+            page = 1,
+            limit = 10,
+            sort = "created_at",
+            order = "desc"
+        } = req.query
+
+        const result = await searchShopAdminService({
+            role_id,
+            search,
+            page: Number(page),
+            limit: Number(limit),
+            sort,
+            order
+        })
+
+        return res.status(200).json({
+            message: "Shops retrieved successfully",
+            shops: result.shops,
+            pagination: result.pagination
+        })
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}
+
+
+// get all shop
+export const getAllShopAdmin = async (req, res) => {
+    try {
+
+        const role_id = req.user.role_id
+
+        const result = await getAllShopAdminService ({role_id})
+
+        return res.status(200).json({
+            shop: result.shops
+        });
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}
+
+// get shop by shop id
+export const getShopByShopIDAdmin = async (req, res) => {
+    try {
+        
+        const role_id = req.user.sub
+        const {id} = req.params;
+
+        const result = await getShopByShopIDAdminService ({role_id, id})
 
         return res.status(200).json({
             shop: result.shop
