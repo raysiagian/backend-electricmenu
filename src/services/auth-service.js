@@ -234,28 +234,34 @@ export const verifyOTPService = async (email, otp) => {
 
 // login
 
-export const loginService = async ({email, password}) => {
+export const loginService = async ({ email, password }) => {
 
     const normalizedEmail = normalizeEmail(email);
-    if(!normalizedEmail || !password) throw new Error("All field are required");
 
-    
+    if (!normalizedEmail || !password) {
+        throw new Error("All fields are required");
+    }
+
     const result = await pool.query(
-        `SELECT * FROM  users WHERE email = $1`,
+        `SELECT * FROM users WHERE email = $1`,
         [normalizedEmail]
-    )
-    
-    const user = result.rows[0]
+    );
 
-    if(!user)  return res.status(400).json({ message: "User not found" });
+    const user = result.rows[0];
 
-    // password validation
+    if (!user) {
+        throw new Error("Email or password is incorrect");
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
-    if(!validPassword) return res.status(400).json({message: "wrong password"});
 
-    // check email vaerified status
-    if(user.email_verified === false){
-    
+    if (!validPassword) {
+        throw new Error("Email or password is incorrect");
+    }
+
+    // check email verified
+    if (user.email_verified === false) {
+
         const otp = randomOTPNumber();
         const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
@@ -274,18 +280,15 @@ export const loginService = async ({email, password}) => {
         };
     }
 
-    console.log(user)
-
-    // generate token
     const token = generateToken({
         id: user.id,
         email: user.email,
         role_id: user.role_id
-    })
+    });
 
     return {
         emailVerified: true,
         token,
         user
     };
-}
+};
