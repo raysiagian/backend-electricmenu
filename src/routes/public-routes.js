@@ -5,6 +5,6 @@ const router = express.Router()
 
 
 // public
-router.get("/:shop_slug", getShopPublic)
+router.get("/shop/:shop_slug", getShopPublic)
 
 export default router;

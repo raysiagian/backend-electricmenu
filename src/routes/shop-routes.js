@@ -1,5 +1,5 @@
 import express from "express";
-import {searchShopbyUserID, createShop, editShop, getShop, deleteShop } from "../controllers/shop-controller.js";
+import {searchShopbyUserID, createShop, editShop, getShop, deleteShop, getUserShops } from "../controllers/shop-controller.js";
 import { protect } from "../middleware/auth-middleware.js";
 import rateLimit from "express-rate-limit";
 
@@ -17,6 +17,7 @@ router.post("/create-shop", createShopLimiter, protect, createShop)
 router.patch("/edit-shops/:id", protect, editShop)
 router.delete("/delete-shop/:id", protect, deleteShop)
 router.get("/search", protect, searchShopbyUserID)
+router.get("/get-shops", protect, getUserShops)
 router.get("/:id", protect, getShop)
 
 

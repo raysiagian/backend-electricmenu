@@ -25,15 +25,10 @@ Backend API untuk aplikasi Electric Menu menggunakan Express dan PostgreSQL.
 
 ## API Endpoints
 
-auth.md
-shop.md
+- auth.md
+- shop.md
 
-<!-- ### Product
-
-- `GET /api/product/allProduct`
-- `POST /api/product/create-product` -->
-
--->
+---
 
 ## Folder Structure
 

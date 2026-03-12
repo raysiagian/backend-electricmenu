@@ -1,10 +1,10 @@
-import { createShopService, editShopService, getShopService, getShopPublicService,searchShopbyUserIDService, deleteShopService,searchShopAdminService, getShopByShopIDAdminService, getAllShopAdminService } from "../services/shop-service.js"
+import { createShopService, editShopService, getShopService, getShopPublicService,searchShopbyUserIDService, deleteShopService,searchShopAdminService, getShopByShopIDAdminService, getAllShopAdminService, deleteShopAdminService, getShopByUserIDAdminService, getUserShopsService } from "../services/shop-service.js"
 
 
 // private
 
 // search
-// searching shop that only user have been created
+// searching all shop that only user have been created
 export const searchShopbyUserID = async (req, res) => {
     try {
         
@@ -40,6 +40,25 @@ export const searchShopbyUserID = async (req, res) => {
     }
 }
 
+// get
+// get all shop that only user have been created
+export const getUserShops = async (req, res) => {
+    try {
+        
+        const user_id = req.user.sub
+
+        const result = await getUserShopsService ({user_id})
+
+        return res.status(200).json({
+            shop: result.shop
+        });
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}
 
 
 // create shop
@@ -217,7 +236,7 @@ export const getAllShopAdmin = async (req, res) => {
 export const getShopByShopIDAdmin = async (req, res) => {
     try {
         
-        const role_id = req.user.sub
+        const role_id = req.user.role_id
         const {id} = req.params;
 
         const result = await getShopByShopIDAdminService ({role_id, id})
@@ -232,3 +251,42 @@ export const getShopByShopIDAdmin = async (req, res) => {
         });
     }
 }
+
+export const getShopByUserIDAdmin = async (req,res) => {
+    try {
+        const role_id = req.user.role_id
+        const {user_id} = req.params;
+
+        const result = await getShopByUserIDAdminService ({role_id, user_id})
+
+        return res.status(200).json({
+            shops: result.shops
+        })
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}
+
+export const deleteShopAdmin = async (req, res) => {
+    try {
+        
+        const role_id = req.user.role_id
+        const {id} = req.params;
+        const {confirm_shop_name} = req.body
+
+        const result = await deleteShopAdminService({role_id, id, confirm_shop_name})
+
+        return res.status(200).json({
+            message: "Shop deleted sucessfully"
+        });
+
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+} 
