@@ -8,6 +8,8 @@ import pool from "./src/config/db.js"
 // routes
 import authRoutes from "./src/routes/auth-routes.js"
 import shopRoutes from "./src/routes/shop-routes.js"
+import adminRoutes from "./src/routes/admin-routes.js"
+import publicRoutes from "./src/routes/public-routes.js"
 
 const app = express();
 const port = 3000;
@@ -38,6 +40,8 @@ app.get("/", async (req, res) => {
 // api routes
 app.use("/api/auth/", authRoutes);
 app.use("/api/shop/", shopRoutes);
+app.use("/api/admin/", adminRoutes);
+app.use("/api/public/", publicRoutes);
 
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);

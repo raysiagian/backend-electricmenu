@@ -55,6 +55,27 @@ export const searchShopbyUserIDService = async ({user_id, search, page, limit, s
     }
 }
 
+export const getUserShopsService = async ({user_id}) => {
+    if(!user_id)  throw new Error("id is required");
+
+    const result = await pool.query(
+        `SELECT user_id, shop_name
+        FROM shops
+        WHERE user_id = $1
+        AND is_deleted = false`,
+        [user_id]
+    )
+        
+    if (result.rows.length === 0) {
+        throw new Error("Shop not found or not authorized")
+    }
+
+    return {
+        shop: result.rows[0]
+    };
+
+}
+
 // create shop
 export const createShopService = async ({user_id, shop_name}) => {
 
@@ -164,7 +185,7 @@ export const getShopService = async ({ user_id, id }) => {
 
 // delete shop
 // soft delete
-export const deleteShopService = async ({user_id, id, is_deleted}) => {
+export const deleteShopService = async ({user_id, id, confirm_shop_name}) => {
 
     if(!id) throw new Error("Shop id is required")
     if (!confirm_shop_name) throw new Error("Shop name confirmation is required")
@@ -191,8 +212,8 @@ export const deleteShopService = async ({user_id, id, is_deleted}) => {
     await pool.query(
         `UPDATE shops
         SET is_deleted = true
-        WHERE id = $2`,
-        [is_deleted, id]
+        WHERE id = $1`,
+        [id]
     )
 
     return { success: true }
@@ -219,5 +240,166 @@ export const getShopPublicService = async ({shop_slug}) => {
     return {
         shop: result.rows[0]
     }
+
+}
+
+// admin 
+
+// search shop by admin
+export const searchShopAdminService = async ({role_id, search, page, limit, sort, order}) => {
+
+    if(role_id !== 1) throw new Error ("Only admin can acess this service")
+
+    const offset = (page - 1) * limit
+
+    const allowedSort = ["created_at", "shop_name"]
+    const allowedOrder = ["asc", "desc"]
+
+    const sortField = allowedSort.includes(sort) ? sort : "created_at"
+    const sortOrder = allowedOrder.includes(order.toLowerCase()) ? order : "desc"
+
+    const result = await pool.query(
+        `SELECT id, shop_name, shop_slug, qr_url, created_at
+        FROM shops
+        WHERE is_deleted = false
+        AND shop_name ILIKE $1
+        ORDER BY ${sortField} ${sortOrder}
+        LIMIT $2 OFFSET $3`,
+        [`%${search}%`, limit, offset]
+    )
+
+    const count = await pool.query(
+        `SELECT COUNT(*) 
+        FROM shops
+        WHERE shop_name ILIKE $1`,
+        [`%${search}%`]
+    )
+
+    const total = Number(count.rows[0].count)
+
+    return {
+        shops: result.rows,
+        pagination: {
+            total,
+            page,
+            limit,
+            total_pages: Math.ceil(total / limit)
+        }
+    }
+}
+
+// get all shop
+export const getAllShopAdminService = async ({role_id}) => {
+
+    if(role_id !== 1) throw new Error ("Only admin can acess this service")
+    
+    const result = await pool.query(
+        // `SELECT id, shop_name, shop_slug, qr_url
+        // FROM shops
+        // WHERE is_deleted = false 
+        // ORDER BY id`,
+
+        // versi advance
+        `SELECT 
+        shops.id,
+        shops.shop_name,
+        shops.shop_slug,
+        shops.qr_url,
+        users.name as owner_name,
+        users.email
+        FROM shops
+        JOIN users ON users.id = shops.user_id
+        WHERE shops.is_deleted = false
+        ORDER BY shops.id`
+    );
+    
+    return {
+        shops: result.rows
+    }
+
+}
+
+// get shop by id
+
+export const getShopByShopIDAdminService = async ({role_id, id}) => {
+
+    if(role_id !== 1) throw new Error ("Only admin can acess this service")
+
+    if(!id) throw new Error("Shop id is required")
+
+    const result = await pool.query(
+        `SELECT id, shop_name, shop_slug, qr_url
+        FROM shops
+        WHERE id = $1
+        AND is_deleted = false`,
+        [id]
+    );
+
+    if (result.rows.length === 0) {
+        throw new Error("Shop not found");
+    }
+
+    return {
+        shop: result.rows[0]
+    };
+}
+
+export const getShopByUserIDAdminService = async ({role_id, user_id}) => {
+
+    if(role_id !== 1) throw new Error ("Only admin can acess this service")
+    if(!user_id) throw new Error("Shop id is required")
+
+    const result = await pool.query(
+        `SELECT user_id, shop_name
+        FROM shops
+        WHERE user_id = $1
+        AND is_deleted = false`,
+        [user_id]
+    )
+        
+    if (result.rows.length === 0) {
+        throw new Error("Shop not found or not authorized")
+    }
+
+    return {
+        shops: result.rows
+    };
+
+}
+
+export const deleteShopAdminService = async ({role_id, id, confirm_shop_name}) => {
+
+    if(role_id !== 1) throw new Error ("Only admin can acess this service")
+
+    if(!id) throw new Error("Shop id is required")
+    if (!confirm_shop_name) throw new Error("Shop name confirmation is required")
+
+
+    const shopResult = await pool.query(
+        `SELECT id, shop_name
+        FROM shops
+        WHERE id = $1
+        AND is_deleted = false`,
+        [id]
+    )
+
+    if (shopResult.rows.length === 0) {
+        throw new Error("Shop not found or not authorized")
+    }
+
+    const shop = shopResult.rows[0]
+
+    if (shop.shop_name !== confirm_shop_name) {
+        throw new Error("Shop name confirmation does not match")
+    }
+
+    await pool.query(
+        `UPDATE shops
+        SET is_deleted = true
+        WHERE id = $1`,
+        [id]
+    )
+
+    return { success: true }
 
 }
