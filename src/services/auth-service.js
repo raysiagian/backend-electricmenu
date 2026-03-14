@@ -253,6 +253,14 @@ export const loginService = async ({ email, password }) => {
         throw new Error("Email or password is incorrect");
     }
 
+    if(!user){
+        throw new Error("User not found")
+    }
+
+    if(user.is_deleted){
+        throw new Error("Account is deactivated")
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
