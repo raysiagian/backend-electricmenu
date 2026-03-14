@@ -19,6 +19,7 @@ create table users(
 	otp_expired TIMESTAMP,
 	email_verified BOOLEAN DEFAULT FALSE,
 	last_otp_request TIMESTAMP,
+	is_deleted BOOLEAN DEFAULT FALSE,
 	CONSTRAINT fk_users_role
         FOREIGN KEY (role_id)
         REFERENCES roles(id)
