@@ -56,7 +56,7 @@ create table types(
 create table products(
 	id int generated always as identity primary key,
 	shop_id int not null,
-	type_id int not null,
+	type_id int,
 	product_name varchar(255) not null,
 	product_image_url text not null,
 	price NUMERIC(12,2) NOT NULL,
@@ -75,7 +75,7 @@ create table products(
         FOREIGN KEY (type_id)
         REFERENCES types(id)
         ON UPDATE CASCADE
-        ON DELETE CASCADE
+        ON DELETE SET NULL
 );
 
 

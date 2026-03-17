@@ -63,3 +63,4 @@ export const activatedUserAccountAdmin = async (req, res) => {
         });
     }
 }
+
