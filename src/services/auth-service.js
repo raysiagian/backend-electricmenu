@@ -18,6 +18,8 @@ function normalizeEmail(email) {
 // create new admin account
 export const registerAdminService = async ({ name, email, password }) => {
 
+    if (!name || !email || !password) throw new Error ("All field are requiered")
+
     const normalizedEmail = normalizeEmail(email);
 
     // check email avaliablility
@@ -56,6 +58,9 @@ export const registerAdminService = async ({ name, email, password }) => {
 // register user
 // create new user account
 export const registerUserService = async ({name, email, password}) => {
+
+    if (!name || !email || !password) throw new Error ("All field requiered")
+
     const normalizedEmail = normalizeEmail(email);
 
     // check email avaliablility
@@ -239,7 +244,7 @@ export const loginService = async ({ email, password }) => {
     const normalizedEmail = normalizeEmail(email);
 
     if (!normalizedEmail || !password) {
-        throw new Error("All fields are required");
+        throw new Error("All fields required");
     }
 
     const result = await pool.query(

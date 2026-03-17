@@ -11,6 +11,7 @@ import shopRoutes from "./src/routes/shop-routes.js"
 import adminRoutes from "./src/routes/admin-routes.js"
 import publicRoutes from "./src/routes/public-routes.js"
 import userRoutes from "./src/routes/user-routes.js"
+import typeRoutes from "./src/routes/type-routes.js"
 
 const app = express();
 const port = 3000;
@@ -43,7 +44,8 @@ app.use("/api/auth/", authRoutes);
 app.use("/api/shop/", shopRoutes);
 app.use("/api/admin/", adminRoutes);
 app.use("/api/public/", publicRoutes);
-app.use("/api/user/", userRoutes)
+app.use("/api/user/", userRoutes);
+app.use("/api/type/", typeRoutes)
 
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
