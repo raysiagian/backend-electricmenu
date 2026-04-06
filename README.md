@@ -28,6 +28,8 @@ Backend API untuk aplikasi Electric Menu menggunakan Express dan PostgreSQL.
 - auth.md
 - user.md
 - shop.md
+- type.md
+- product.md
 
 ---
 

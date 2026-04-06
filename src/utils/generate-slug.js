@@ -6,3 +6,12 @@ export const generateShopSlugify = (text) => {
         .replace(/[^\w-]/g, "")
 
 }
+
+export const generateProductSlugify = (text) => {
+    
+    return text.toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "")
+
+}

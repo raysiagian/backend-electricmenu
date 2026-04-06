@@ -2,7 +2,8 @@ import bcrypt from 'bcryptjs'
 import pool from '../config/db.js'
 import { sendOTPEmail } from '../utils/send-otp-email.js'
 import { validateOTP } from "../utils/validate-otp.js";
-import { generateToken } from '../utils/generate-token.js';
+import { generateToken, generateRefreshToken } from '../utils/generate-token.js';
+import jwt from "jsonwebtoken"
 
 
 function randomOTPNumber(){
@@ -258,10 +259,6 @@ export const loginService = async ({ email, password }) => {
         throw new Error("Email or password is incorrect");
     }
 
-    if(!user){
-        throw new Error("User not found")
-    }
-
     if(user.is_deleted){
         throw new Error("Account is deactivated")
     }
@@ -299,9 +296,76 @@ export const loginService = async ({ email, password }) => {
         role_id: user.role_id
     });
 
+    const refreshToken = generateRefreshToken({ 
+        id: user.id, 
+        email: user.email, 
+        role_id: 
+        user.role_id 
+    });
+
+     // Simpan refresh token ke DB
+    const refreshExpired = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 hari
+    await pool.query(
+        `UPDATE users 
+        SET refresh_token = $1, refresh_token_expired = $2 
+        WHERE id = $3`,
+        [refreshToken, refreshExpired, user.id]
+    );
+
+
     return {
         emailVerified: true,
         token,
+        refreshToken,
         user
     };
+};
+
+
+// refresh token
+export const refreshTokenService = async ({ refreshToken }) => {
+    if (!refreshToken) throw new Error("Refresh token required");
+
+    // Verifikasi signature dulu
+    let decoded;
+    try {
+        decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, {
+            issuer: "emenu-api"
+        });
+    } catch {
+        throw new Error("Invalid or expired refresh token");
+    }
+
+    // Cek di DB: token harus cocok dan belum expired
+    const result = await pool.query(
+        `SELECT id, email, role_id, refresh_token, refresh_token_expired, is_deleted
+         FROM users WHERE id = $1`,
+        [decoded.sub]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) throw new Error("User not found");
+    if (user.is_deleted) throw new Error("Account is deactivated");
+    if (user.refresh_token !== refreshToken) throw new Error("Refresh token mismatch"); // cegah token lama dipakai
+    if (new Date(user.refresh_token_expired) < new Date()) throw new Error("Refresh token expired, please login again");
+
+    // Generate access token baru
+    const newAccessToken = generateToken({
+        id: user.id,
+        email: user.email,
+        role_id: user.role_id
+    });
+
+    return { token: newAccessToken };
+};
+
+// logout
+export const logoutService = async ({ id }) => {
+    // Hapus refresh token saat logout
+    await pool.query(
+        `UPDATE users SET refresh_token = NULL, refresh_token_expired = NULL WHERE id = $1`,
+        [id]
+    );
+    return true;
 };
