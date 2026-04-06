@@ -1,7 +1,7 @@
 import pool from '../config/db.js'
 import {generateShopSlugify} from '../utils/generate-slug.js'
 import {generateHashID} from '../utils/generate-hash-id.js'
-import { BASE_URL,  UPLOAD_PATH } from "../config/app-config.js";
+import { BASE_URL,  FRONTEND_URL,  UPLOAD_PATH } from "../config/app-config.js";
 import qr from "qr-image";
 import fs from "fs";
 import path from "path"
@@ -59,19 +59,15 @@ export const getUserShopsService = async ({user_id}) => {
     if(!user_id)  throw new Error("id is required");
 
     const result = await pool.query(
-        `SELECT user_id, shop_name
+        `SELECT user_id, id, shop_name, shop_slug, qr_url
         FROM shops
         WHERE user_id = $1
         AND is_deleted = false`,
         [user_id]
     )
         
-    if (result.rows.length === 0) {
-        throw new Error("Shop not found or not authorized")
-    }
-
     return {
-        shop: result.rows[0]
+        shop: result.rows
     };
 
 }
@@ -88,10 +84,11 @@ export const createShopService = async ({user_id, shop_name}) => {
         [user_id, shop_name]
     )
     
+
     const id = result.rows[0].id
 
     const shop_slug = `${generateShopSlugify(shop_name)}-${generateHashID(id)}`
-    const shop_url = `${BASE_URL}/api/shop/${shop_slug}`;
+    const shop_url = `${FRONTEND_URL}/shop/${shop_slug}`;
     const qr_path = path.join(process.cwd(), UPLOAD_PATH.QR, `${shop_slug}.png`);
     const qr_image = qr.imageSync(shop_url, { type: "png" });
     const qr_url = `${BASE_URL}/qr/${shop_slug}.png`;
@@ -109,6 +106,7 @@ export const createShopService = async ({user_id, shop_name}) => {
         shop: {
             shop_name,
             shop_slug,
+            shop_url,
             qr_url
         }
     };
@@ -176,8 +174,15 @@ export const getShopService = async ({ user_id, id }) => {
         throw new Error("Shop not found");
     }
 
+    const shop = result.rows[0]
+
+    const shop_url = `${FRONTEND_URL}/shop/${shop.shop_slug}`;
+
     return {
-        shop: result.rows[0]
+        shop: {
+            ...shop,
+            shop_url
+        }
     };
 
 }

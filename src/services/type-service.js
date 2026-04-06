@@ -161,7 +161,7 @@ export const searchTypeDropdownUserService = async ({search}) => {
     const normalizedSearch = search.trim().toLowerCase()
 
     const result = await pool.query(
-        `SELECT type_name FROM types WHERE type_name ILIKE $1 ORDER BY type_name ASC LIMIT 10`,
+        `SELECT id, type_name FROM types WHERE type_name ILIKE $1 ORDER BY type_name ASC LIMIT 10`,
         [`%${normalizedSearch}%`]
     )
 

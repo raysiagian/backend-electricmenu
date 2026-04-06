@@ -2,12 +2,14 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import cors from "cors";
 import pool from "./src/config/db.js"
 
 
 // routes
 import authRoutes from "./src/routes/auth-routes.js"
 import shopRoutes from "./src/routes/shop-routes.js"
+import productRoutes from "./src/routes/product-routes.js"
 import adminRoutes from "./src/routes/admin-routes.js"
 import publicRoutes from "./src/routes/public-routes.js"
 import userRoutes from "./src/routes/user-routes.js"
@@ -15,7 +17,10 @@ import typeRoutes from "./src/routes/type-routes.js"
 
 const app = express();
 const port = 3000;
-const baseURL = `http://localhost:${port}`
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 
 app.use(express.json())
 app.use("/qr", express.static("uploads/qr_image"));
@@ -42,6 +47,7 @@ app.get("/", async (req, res) => {
 // api routes
 app.use("/api/auth/", authRoutes);
 app.use("/api/shop/", shopRoutes);
+app.use("/api/product", productRoutes)
 app.use("/api/admin/", adminRoutes);
 app.use("/api/public/", publicRoutes);
 app.use("/api/user/", userRoutes);

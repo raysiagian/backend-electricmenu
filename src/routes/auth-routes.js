@@ -1,5 +1,5 @@
 import express from "express"
-import { changePassword, login, registerAdmin, registerUser, resendRegisterOTP, sendResetPasswordOTP, verifyOTP } from "../controllers/auth-controller.js"
+import { changePassword, login, logout, registerAdmin, registerUser, resendRegisterOTP, sendResetPasswordOTP, verifyOTP } from "../controllers/auth-controller.js"
 import rateLimit from "express-rate-limit";
 
 const otpLimiter = rateLimit({
@@ -16,6 +16,12 @@ const registerLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const loginLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 menit
+    max: 5,
+    message: "Too many login request. Please try later"
+});
+
 
 const router = express.Router()
 
@@ -27,6 +33,7 @@ router.post("/resend-otp",otpLimiter, resendRegisterOTP);
 router.post("/reset-password-otp", otpLimiter, sendResetPasswordOTP);
 router.patch("/reset-password", changePassword)
 
-router.post("/login", login)
+router.post("/login", loginLimiter, login)
+router.post("/logout", logout)
 
 export default router

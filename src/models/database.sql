@@ -19,6 +19,8 @@ create table users(
 	otp_expired TIMESTAMP,
 	email_verified BOOLEAN DEFAULT FALSE,
 	last_otp_request TIMESTAMP,
+	refresh_token TEXT,
+	refresh_token_expired TIMESTAMPZ,
 	is_deleted BOOLEAN DEFAULT FALSE,
 	CONSTRAINT fk_users_role
         FOREIGN KEY (role_id)
@@ -53,16 +55,20 @@ create table types(
 	type_name varchar(255) not null unique
 );
 
+CREATE TYPE service_type_enum AS ENUM ('product', 'service');
+
 create table products(
 	id int generated always as identity primary key,
 	shop_id int not null,
 	type_id int,
 	product_name varchar(255) not null,
+	product_slug varchar(255) not null unique,
 	product_image_url text not null,
 	price NUMERIC(12,2) NOT NULL,
-	service_type ENUM ('products', 'service'),
+	service_type service_type_enum,
 	stock INT,
 	is_deleted BOOLEAN DEFAULT FALSE,
+	is_available BOOLEAN DEFAULT TRUE,
 	created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
 	CONSTRAINT fk_product_shop
@@ -77,6 +83,8 @@ create table products(
         ON UPDATE CASCADE
         ON DELETE SET NULL
 );
+
+-- check 
 
 
 CREATE INDEX idx_products_shop_id ON products(shop_id);

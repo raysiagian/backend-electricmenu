@@ -1,5 +1,5 @@
 
-import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService  } from '../services/auth-service.js';
+import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, logoutService  } from '../services/auth-service.js';
 
 
 
@@ -279,5 +279,27 @@ export const login = async (req, res) => {
         return res.status(400).json({
             error: err.message
         });
+    }
+};
+
+// logout
+export const logout = async (req, res) => {
+    try {
+        const { id } = req.user.sub // atau ambil dari token yang sudah di-decode middleware
+        await logoutService({ id });
+        res.json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+export const refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        const result = await refreshTokenService({ refreshToken });
+        res.json({ success: true, ...result });
+    } catch (error) {
+        res.status(401).json({ success: false, message: error.message });
     }
 };
