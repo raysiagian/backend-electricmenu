@@ -1,5 +1,5 @@
 
-import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, logoutService  } from '../services/auth-service.js';
+import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, logoutService, getProfileDataService  } from '../services/auth-service.js';
 
 
 
@@ -303,3 +303,20 @@ export const refreshToken = async (req, res) => {
         res.status(401).json({ success: false, message: error.message });
     }
 };
+
+export const getProfileData = async (req, res) => {
+    try{
+        const user_id = req.user.sub;
+
+        const result = await getProfileDataService({ user_id });
+
+        return res.status(200).json({
+            user: result.user
+        });
+
+    }catch(err){
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}

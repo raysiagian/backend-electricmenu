@@ -723,3 +723,76 @@ export const getAllProductAdminService = async({role_id, page, limit}) => {
     }
 
 }
+
+
+// public
+
+export const getAllProductsByShopSlugService = async ({
+    shop_slug,
+    page = 1, 
+    limit = 10, 
+    sort, 
+    order
+}) => {
+
+    if(!shop_slug) throw new Error ("All field required")
+
+    const offset = (page - 1) * limit;
+
+    
+    const allowedSort = ["created_at", "price", "product_name", "stock"];
+    const allowedOrder = ["ASC", "DESC"];
+    const safeSort = allowedSort.includes(sort) ? sort : "created_at";
+    const safeOrder = allowedOrder.includes(order.toUpperCase()) ? order.toUpperCase() : "DESC";
+
+
+    const shopCheck = await pool.query(
+        `SELECT id FROM shops WHERE shop_slug = $1 AND is_deleted = false`,
+        [shop_slug]
+    )
+
+    if (shopCheck.rows.length === 0) {
+        throw new Error("Shop not found or not authorized")
+    }
+
+    const shop_id = shopCheck.rows[0].id;
+
+    const result = await pool.query(
+        `SELECT 
+            p.id,
+            p.product_name,
+            p.product_slug,
+            p.service_type,
+            p.price,
+            p.stock,
+            p.product_image_url,
+            COALESCE(t.type_name, 'Uncategorized') as type_name
+        FROM products p
+        LEFT JOIN types t ON p.type_id = t.id
+        WHERE p.shop_id = $1
+        AND p.is_deleted = false
+        ORDER BY p.${safeSort} ${safeOrder}
+        LIMIT $2 OFFSET $3`,
+        [shop_id, limit, offset]
+    )
+
+    const countResult = await pool.query(
+        `SELECT COUNT(*) 
+        FROM products 
+        WHERE shop_id = $1 AND is_deleted = false`,
+        [shop_id]
+    );
+
+    
+    const total = parseInt(countResult.rows[0].count)
+
+    return {
+        products: result.rows,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+}

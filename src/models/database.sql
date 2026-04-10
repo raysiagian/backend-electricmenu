@@ -90,20 +90,38 @@ create table products(
 CREATE INDEX idx_products_shop_id ON products(shop_id);
 CREATE INDEX idx_products_type_id ON products(type_id);
 
-CREATE TABLE orders(
-	id int generated always as identity primary key,
-	shop_id INT NOT NULL,
-	product_id int not null,
-	buyer_name varchar(255) not null,
-	total_price NUMERIC(12,2) NOT NULL,,
 
-	CONSTRAINT fk_order_shop
+
+CREATE TYPE order_status_enum AS ENUM ('pending', 'cancelled', 'done');
+
+CREATE TABLE orders(
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    shop_id INT NOT NULL,
+    buyer_name VARCHAR(255) NOT NULL,
+    grand_total NUMERIC(12,2) NOT NULL DEFAULT 0,
+    status order_status_enum DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT fk_order_shop
         FOREIGN KEY (shop_id)
         REFERENCES shops(id)
         ON UPDATE CASCADE
-        ON DELETE RESTRICT,
+        ON DELETE RESTRICT
+);
 
-	CONSTRAINT fk_order_product
+CREATE TABLE order_items(
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    price NUMERIC(12,2) NOT NULL,
+    total_price NUMERIC(12,2) NOT NULL,
+    CONSTRAINT fk_item_order
+        FOREIGN KEY (order_id)
+        REFERENCES orders(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_item_product
         FOREIGN KEY (product_id)
         REFERENCES products(id)
         ON UPDATE CASCADE
