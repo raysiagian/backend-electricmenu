@@ -369,3 +369,24 @@ export const logoutService = async ({ id }) => {
     );
     return true;
 };
+
+
+export const getProfileDataService = async ({ user_id }) => {
+
+    if (!user_id) throw new Error("User ID is required");
+
+    const result = await pool.query(
+        `SELECT id, name, email, role_id
+        FROM users
+        WHERE id = $1`,
+        [user_id]
+    );
+
+    if (result.rows.length === 0) {
+        throw new Error("User not found");
+    }
+
+    return {
+        user: result.rows[0]
+    };
+};

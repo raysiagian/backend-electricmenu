@@ -1,6 +1,6 @@
 // private
 
-import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService } from "../services/product-service.js";
+import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService, getAllProductsByShopSlugService } from "../services/product-service.js";
 
 // User
 
@@ -152,7 +152,8 @@ export const searchProductByUserID = async (req, res) => {
 export const searchProductByShop = async (req, res) => {
     try {
         const user_id = req.user.sub
-        const { shop_id, search, page, limit, sort, order } = req.query
+        const {shop_id} = req.params
+        const { search, page, limit, sort, order } = req.query
 
         const result = await searchProductByShopIDService({
             user_id,
@@ -307,5 +308,37 @@ export const getAllProductAdmin = async (req, res) => {
         return res.status(400).json({
             error: err.message
         })
+    }
+}
+
+// public
+
+export const getAllProductsByShopSlug = async (req, res) => {
+    try {
+        const {shop_slug} = req.params
+
+        const {
+            page = 1,
+            limit = 10,
+            sort = "created_at",
+            order = "DESC"
+        } = req.query
+
+        const result = await getAllProductsByShopSlugService({
+            shop_slug,
+            page: Number(page), 
+            limit: Number(limit),
+            sort,
+            order
+        })
+
+        return res.status(200).json({
+            products: result.products,
+            pagination: result.pagination
+        })
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        });
     }
 }

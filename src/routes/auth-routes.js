@@ -1,5 +1,6 @@
 import express from "express"
-import { changePassword, login, logout, registerAdmin, registerUser, resendRegisterOTP, sendResetPasswordOTP, verifyOTP } from "../controllers/auth-controller.js"
+import { protect } from "../middleware/auth-middleware.js";
+import { getProfileData, changePassword, login, logout, registerAdmin, registerUser, resendRegisterOTP, sendResetPasswordOTP, verifyOTP } from "../controllers/auth-controller.js"
 import rateLimit from "express-rate-limit";
 
 const otpLimiter = rateLimit({
@@ -24,6 +25,8 @@ const loginLimiter = rateLimit({
 
 
 const router = express.Router()
+
+router.get("/profile", protect, getProfileData);
 
 router.post("/register-admin",registerLimiter, registerAdmin)
 router.post("/register-user",registerLimiter, registerUser)

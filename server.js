@@ -10,6 +10,7 @@ import pool from "./src/config/db.js"
 import authRoutes from "./src/routes/auth-routes.js"
 import shopRoutes from "./src/routes/shop-routes.js"
 import productRoutes from "./src/routes/product-routes.js"
+import orderRoutes from "./src/routes/order-routes.js"
 import adminRoutes from "./src/routes/admin-routes.js"
 import publicRoutes from "./src/routes/public-routes.js"
 import userRoutes from "./src/routes/user-routes.js"
@@ -18,12 +19,13 @@ import typeRoutes from "./src/routes/type-routes.js"
 const app = express();
 const port = 3000;
 app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true
+    origin: "http://localhost:5173",
+    credentials: true
 }));
 
 app.use(express.json())
 app.use("/qr", express.static("uploads/qr_image"));
+app.use("/product", express.static("uploads/product_image"))
 // check connectivity
 pool.connect()
     .then(() => {
@@ -48,6 +50,7 @@ app.get("/", async (req, res) => {
 app.use("/api/auth/", authRoutes);
 app.use("/api/shop/", shopRoutes);
 app.use("/api/product", productRoutes)
+app.use("/api/order", orderRoutes)
 app.use("/api/admin/", adminRoutes);
 app.use("/api/public/", publicRoutes);
 app.use("/api/user/", userRoutes);
