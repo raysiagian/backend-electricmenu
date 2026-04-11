@@ -1,7 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { getShopPublic } from "../controllers/shop-controller.js";
-import {getAllProductsByShopSlug} from "../controllers/product-controller.js"
+import {getAllProductsByShopSlug, searchProductsinShopPublic} from "../controllers/product-controller.js"
 import { createOrder } from "../controllers/order-controller.js";
 
 
@@ -19,5 +19,6 @@ const router = express.Router()
 router.get("/shop/:shop_slug", getShopPublic)
 router.get("/shop/:shop_slug/products", getAllProductsByShopSlug)
 router.post("/shop/:shop_slug/order/create-order", orderLimiter, createOrder)
+router.get("/shop/:shop_slug/search-product", searchProductsinShopPublic)
 
 export default router;

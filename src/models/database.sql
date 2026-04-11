@@ -62,6 +62,7 @@ create table products(
 	shop_id int not null,
 	type_id int,
 	product_name varchar(255) not null,
+    product_name_normalized VARCHAR(255);
 	product_slug varchar(255) not null unique,
 	product_image_url text not null,
 	price NUMERIC(12,2) NOT NULL,

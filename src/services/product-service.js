@@ -343,7 +343,7 @@ export const searchProductByShopIDService = async ({
         [shop_id, searchQuery, limit, offset]
     )
 
-    // 🔥 COUNT
+    // COUNT
     const count = await pool.query(
         `SELECT COUNT(*)
         FROM products
@@ -417,6 +417,22 @@ export const createProductService = async ({
         throw new Error("Shop not found or not authorized");
     }
 
+    // Setelah validasi shop, sebelum prepare file
+    const normalizedName = product_name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+    // Duplicate check pakai normalized name
+    const duplicateCheck = await pool.query(
+        `SELECT id FROM products 
+        WHERE shop_id = $1 
+        AND product_name_normalized = $2 
+        AND is_deleted = false`,
+        [shop_id, normalizedName]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+        throw new Error("Product with similar name already exists in this shop");
+    }
+
 
     // PREPARE FILE
     const uploadDir = path.join(process.cwd(), UPLOAD_PATH.PRODUCT);
@@ -446,13 +462,14 @@ export const createProductService = async ({
     // INSERT (SUDAH ADA IMAGE)
     const result = await pool.query(
         `INSERT INTO products 
-        (shop_id, type_id, product_name, product_slug, product_image_url, price, service_type, stock)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (shop_id, type_id, product_name, product_name_normalized, product_slug, product_image_url, price, service_type, stock)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, product_name, price, service_type, stock, product_slug, product_image_url`,
         [
             shop_id,
             type_id || null,
             product_name,
+            normalizedName, 
             "temp-slug", // sementara
             product_image_url,
             price,
@@ -469,8 +486,8 @@ export const createProductService = async ({
 
     await pool.query(
         `UPDATE products
-         SET product_slug = $1
-         WHERE id = $2`,
+        SET product_slug = $1
+        WHERE id = $2`,
         [product_slug, id]
     );
 
@@ -795,4 +812,85 @@ export const getAllProductsByShopSlugService = async ({
             totalPages: Math.ceil(total / limit)
         }
     };
+}
+
+export const searchProductsinShopPublicService = async ({
+    shop_slug,
+    search = "",
+    page = 1,
+    limit = 10,
+    sort = "created_at",
+    order = "desc"
+}) => {
+
+    if(!shop_slug){
+        throw new Error("shop slug is required")
+    }
+
+    const offset = (page - 1) * limit
+
+    const allowedSort = ["created_at", "product_name", "price"]
+    const allowedOrder = ["asc", "desc"]
+
+    const sortField = allowedSort.includes(sort) ? sort : "created_at"
+    const sortOrder = allowedOrder.includes(order?.toLowerCase()) ? order : "desc"
+
+    const searchQuery = `%${search}%`
+
+    // validasi shop
+    const shopCheck = await pool.query(
+        `SELECT id FROM shops WHERE shop_slug = $1 AND is_deleted = false`,
+        [shop_slug]
+    )
+
+    if(shopCheck.rows.length === 0){
+        throw new Error("Shop not found")
+    }
+
+    const shop_id = shopCheck.rows[0].id
+
+    const result = await pool.query(
+        `SELECT 
+            id,
+            product_name,
+            product_slug,
+            product_image_url,
+            price,
+            stock,
+            created_at
+        FROM products
+        WHERE shop_id = $1
+        AND is_deleted = false
+        AND (
+            product_name ILIKE $2
+        )
+        ORDER BY ${sortField} ${sortOrder}
+        LIMIT $3 OFFSET $4`,
+        [shop_id, searchQuery, limit, offset]
+    )
+
+    // COUNT
+    const count = await pool.query(
+        `SELECT COUNT(*)
+        FROM products
+        WHERE shop_id = $1
+        AND is_deleted = false
+        AND (
+            product_name ILIKE $2
+        )`,
+        [shop_id, searchQuery]
+    )
+
+    const total = Number(count.rows[0].count)
+
+    return {
+        products: result.rows,
+        pagination: {
+            total,
+            page,
+            limit,
+            total_pages: Math.ceil(total / limit)
+        }
+    }
+
 }
