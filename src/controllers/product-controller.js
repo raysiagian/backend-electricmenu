@@ -1,6 +1,6 @@
 // private
 
-import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService, getAllProductsByShopSlugService } from "../services/product-service.js";
+import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService, getAllProductsByShopSlugService, searchProductsinShopPublicService } from "../services/product-service.js";
 
 // User
 
@@ -340,5 +340,31 @@ export const getAllProductsByShopSlug = async (req, res) => {
         return res.status(400).json({
             error: err.message
         });
+    }
+}
+
+// search product in shop public
+
+export const searchProductsinShopPublic = async (req, res) => {
+    try {
+        
+        const {shop_slug} = req.params
+        const { search, page, limit, sort, order } = req.query
+
+        const result = await searchProductsinShopPublicService({
+            shop_slug,
+            search,
+            page: Number(page),
+            limit: Number(limit),
+            sort,
+            order
+        })
+
+        return res.status(200).json(result)
+
+    } catch (err) {
+        return res.status(400).json({
+            error: err.message
+        })
     }
 }

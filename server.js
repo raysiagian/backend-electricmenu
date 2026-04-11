@@ -56,8 +56,8 @@ app.use("/api/public/", publicRoutes);
 app.use("/api/user/", userRoutes);
 app.use("/api/type/", typeRoutes)
 
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
+// console.log("EMAIL_USER:", process.env.EMAIL_USER);
+// console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
 
 app.listen(port, () => {
