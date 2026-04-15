@@ -685,6 +685,58 @@ export const deleteProductService = async ({ user_id, id, confirm_product_name }
 };
 
 
+export const getProductStatsByIDService = async ({ id, user_id }) => {
+    if (!id) throw new Error("Product id is required");
+
+    // Validasi produk milik user
+    const productCheck = await pool.query(
+        `SELECT 
+            p.id,
+            p.product_name,
+            p.price,
+            p.stock,
+            p.service_type,
+            p.is_available
+        FROM products p
+        JOIN shops s ON s.id = p.shop_id
+        WHERE p.id = $1 
+        AND s.user_id = $2 
+        AND p.is_deleted = false`,
+        [id, user_id]
+    );
+
+    if (productCheck.rows.length === 0) {
+        throw new Error("Product not found or not authorized");
+    }
+
+    const product = productCheck.rows[0];
+
+    // Hitung total quantity dan total pendapatan dari order yang done
+    const statsResult = await pool.query(
+        `SELECT 
+            COALESCE(SUM(oi.quantity), 0) AS total_quantity,
+            COALESCE(SUM(oi.total_price), 0) AS total_revenue
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.product_id = $1
+        AND o.status = 'done'`,
+        [id]
+    );
+
+    const stats = statsResult.rows[0];
+
+    return {
+        product_id: product.id,
+        product_name: product.product_name,
+        price: product.price,
+        stock: product.stock,
+        service_type: product.service_type,
+        is_available: product.is_available,
+        total_quantity: parseInt(stats.total_quantity),
+        total_revenue: parseFloat(stats.total_revenue)
+    };
+};
+
 // admin
 
 // get product by product id for admin

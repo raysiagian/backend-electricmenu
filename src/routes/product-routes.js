@@ -8,7 +8,9 @@ import { createProduct,
     getProductByProductID, 
     getProductByShopIDandProductID,
     searchProductByUserID,
-    searchProductByShop 
+    getProductStatsByID,
+    searchProductByShop,
+    deleteProduct 
 } from "../controllers/product-controller.js";
 
 const createProductLimiter = rateLimit({
@@ -27,7 +29,10 @@ router.get("/get-product/:id", protect, getProductByProductID)
 router.get("/shop/:shop_id/product/:id", protect, getProductByShopIDandProductID)
 router.get("/get-all-products", protect, getAllProductByUserID)
 router.get("/search-product", protect, searchProductByUserID)
+router.get("/stats/:id", protect, getProductStatsByID);
+router.delete("/:id/delete-product", protect, deleteProduct)
 router.get("/shop/:shop_id/search-product", protect, searchProductByShop)
+
 
 
 export default router;

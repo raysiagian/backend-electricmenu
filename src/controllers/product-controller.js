@@ -1,6 +1,20 @@
 // private
 
-import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService, getAllProductsByShopSlugService, searchProductsinShopPublicService } from "../services/product-service.js";
+import {
+    createProductService, 
+    getAllProductByShopIDService, 
+    getAllProductByUserIDService, 
+    getProductByShopIDandProductIDService, 
+    getProductByProductIDService, 
+    editProductService, 
+    deleteProductService,
+    getProductStatsByIDService, 
+    getProductByProductIDAdminService, 
+    getAllProductAdminService, 
+    searchProductByUserIDService, 
+    searchProductByShopIDService, 
+    getAllProductsByShopSlugService, 
+    searchProductsinShopPublicService } from "../services/product-service.js";
 
 // User
 
@@ -218,6 +232,7 @@ export const editProduct = async (req, res) => {
 
         const result = await editProductService ({
             user_id, 
+            id,
             shop_id, 
             product_name, 
             type_id, 
@@ -259,6 +274,22 @@ export const deleteProduct = async (req, res) => {
         });
     }
 }
+
+export const getProductStatsByID = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user_id = req.user.sub;
+
+        const result = await getProductStatsByIDService({ id, user_id });
+
+        return res.status(200).json({
+            stats: result
+        });
+
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
+};
 
 
 // admin
