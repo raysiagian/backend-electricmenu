@@ -1,5 +1,5 @@
 
-import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, logoutService, getProfileDataService  } from '../services/auth-service.js';
+import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, refreshTokenService, logoutService, getProfileDataService  } from '../services/auth-service.js';
 
 
 
