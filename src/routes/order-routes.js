@@ -5,7 +5,7 @@ import { getOrdersByShop, updateOrderStatus } from "../controllers/order-control
 const router = express.Router();
 
 
-router.get("/shop/:shop_id", protect, getOrdersByShop)
+router.get("/shop/:shop_id/get-shop-order", protect, getOrdersByShop)
 router.patch("/:order_id/status", protect, updateOrderStatus)
 
 export default router;

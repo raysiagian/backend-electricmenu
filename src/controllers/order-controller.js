@@ -7,8 +7,8 @@ export const createOrder = async (req, res) => {
         const { shop_slug } = req.params;
         const { buyer_name, items } = req.body;
 
-        console.log("req.params:", req.params);
-        console.log("req.body:", req.body);
+        // console.log("req.params:", req.params);
+        // console.log("req.body:", req.body);
 
         const order = await createOrderService({ shop_slug, buyer_name, items });
         return res.status(200).json({ success: true, order });
@@ -25,8 +25,32 @@ export const getOrdersByShop = async (req, res) => {
     try {
         const { shop_id } = req.params;
         const user_id = req.user.sub;
-        const orders = await getOrdersByShopService({ user_id, shop_id });
-        return res.status(200).json({ success: true, orders });
+        
+        const {
+            page = 1,
+            limit = 10,
+            sort = "id",
+            order = "DESC",
+            status
+        } = req.query
+
+
+        const result = await getOrdersByShopService({ 
+            user_id, 
+            shop_id,
+            page: Number(page), 
+            limit: Number(limit),
+            sort,
+            order,
+            status
+
+        });
+
+        return res.status(200).json({ 
+            orders: result.orders,
+            pagination: result.pagination
+        });
+
     } catch (err) {
         return res.status(400).json({ error: err.message });
     }

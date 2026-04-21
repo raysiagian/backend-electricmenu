@@ -72,6 +72,7 @@ export const getProductByShopIDandProductIDService = async ({id, shop_id, user_i
             p.price,
             p.stock,
             p.product_image_url,
+            p.is_available,
             COALESCE(t.type_name, 'No Type') as type_name
         FROM products p
         JOIN shops s ON p.shop_id = s.id
@@ -133,6 +134,7 @@ export const getAllProductByShopIDService = async ({
             p.price,
             p.stock,
             p.product_image_url,
+            p.is_available,
             COALESCE(t.type_name, 'Uncategorized') as type_name
         FROM products p
         LEFT JOIN types t ON p.type_id = t.id
@@ -509,12 +511,12 @@ export const editProductService = async ({ id, user_id, payload, file }) => {
     // Cek apakah produk ada dan milik user yang benar
     const checkProduct = await pool.query(
         `SELECT p.*, s.user_id 
-         FROM products p
-         JOIN shops s ON p.shop_id = s.id
-         WHERE p.id = $1
-         AND s.user_id = $2
-         AND p.is_deleted = false
-         AND s.is_deleted = false`,
+        FROM products p
+        JOIN shops s ON p.shop_id = s.id
+        WHERE p.id = $1
+        AND s.user_id = $2
+        AND p.is_deleted = false
+        AND s.is_deleted = false`,
         [id, user_id]
     );
 
@@ -685,6 +687,107 @@ export const deleteProductService = async ({ user_id, id, confirm_product_name }
 };
 
 
+export const getProductStatsByIDService = async ({ id, user_id }) => {
+    if (!id) throw new Error("Product id is required");
+
+    // Validasi produk milik user
+    const productCheck = await pool.query(
+        `SELECT 
+            p.id,
+            p.product_name,
+            p.price,
+            p.stock,
+            p.service_type,
+            p.is_available
+        FROM products p
+        JOIN shops s ON s.id = p.shop_id
+        WHERE p.id = $1 
+        AND s.user_id = $2 
+        AND p.is_deleted = false`,
+        [id, user_id]
+    );
+
+    if (productCheck.rows.length === 0) {
+        throw new Error("Product not found or not authorized");
+    }
+
+    const product = productCheck.rows[0];
+
+    // Hitung total quantity dan total pendapatan dari order yang done
+    const statsResult = await pool.query(
+        `SELECT 
+            COALESCE(SUM(oi.quantity), 0) AS total_quantity,
+            COALESCE(SUM(oi.total_price), 0) AS total_revenue
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE oi.product_id = $1
+        AND o.status = 'done'`,
+        [id]
+    );
+
+    const stats = statsResult.rows[0];
+
+    return {
+        product_id: product.id,
+        product_name: product.product_name,
+        price: product.price,
+        stock: product.stock,
+        service_type: product.service_type,
+        is_available: product.is_available,
+        total_quantity: parseInt(stats.total_quantity),
+        total_revenue: parseFloat(stats.total_revenue)
+    };
+};
+
+export const updateProductAvailabilityService = async ({user_id, id}) => {
+
+    if(!user_id ||  !id) throw new Error ("All field required")
+
+
+    const checkProduct = await pool.query(
+        `SELECT 
+            p.id,
+            p.shop_id,
+            p.is_available
+        FROM products p
+        JOIN shops s ON s.id = p.shop_id
+        WHERE p.id = $1 
+        AND s.user_id = $2 
+        AND p.is_deleted = false`,
+        [id, user_id]
+    );
+    
+    console.log("checkProduct rows:", checkProduct.rows); // ← tambahkan ini
+    console.log("params:", [id, user_id]);                // ← tambahkan ini
+
+    if(checkProduct.rows.length === 0) throw new Error ("Product not found or not authorized")
+    
+    const product = checkProduct.rows[0];
+    // console.log("CHECK PRODUCT:", checkProduct.rows)
+
+    const shop_id = product.shop_id
+
+    // kebalikan data saat ini
+    const newAvailability = !product.is_available;
+
+    const updated = await pool.query(
+        `UPDATE products
+        SET is_available = $1,
+        updated_at = NOW()
+        WHERE id = $2
+        AND shop_id = $3
+        RETURNING id, is_available`,
+        [newAvailability, id, shop_id,]
+    );
+
+    console.log("ID:", id)
+    console.log("SHOP_ID:", shop_id)
+
+    return{
+        product: updated.rows[0]
+    }
+}
+
 // admin
 
 // get product by product id for admin
@@ -736,7 +839,7 @@ export const getAllProductAdminService = async({role_id, page, limit}) => {
     );
     
     return {
-        shops: result.rows
+        products: result.rows
     }
 
 }

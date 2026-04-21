@@ -1,6 +1,21 @@
 // private
 
-import {createProductService, getAllProductByShopIDService, getAllProductByUserIDService, getProductByShopIDandProductIDService, getProductByProductIDService, editProductService, deleteProductService, getProductByProductIDAdminService, getAllProductAdminService, searchProductByUserIDService, searchProductByShopIDService, getAllProductsByShopSlugService, searchProductsinShopPublicService } from "../services/product-service.js";
+import {
+    createProductService, 
+    getAllProductByShopIDService, 
+    getAllProductByUserIDService, 
+    getProductByShopIDandProductIDService, 
+    getProductByProductIDService, 
+    editProductService, 
+    deleteProductService,
+    updateProductAvailabilityService,
+    getProductStatsByIDService, 
+    getProductByProductIDAdminService, 
+    getAllProductAdminService, 
+    searchProductByUserIDService, 
+    searchProductByShopIDService, 
+    getAllProductsByShopSlugService, 
+    searchProductsinShopPublicService } from "../services/product-service.js";
 
 // User
 
@@ -216,16 +231,7 @@ export const editProduct = async (req, res) => {
         const payload = req.body
         const file = req.file
 
-        const result = await editProductService ({
-            user_id, 
-            shop_id, 
-            product_name, 
-            type_id, 
-            service_type, 
-            price, 
-            stock,
-            file
-        })
+        const result = await editProductService({ user_id, id, payload, file });
 
         return res.status(200).json({
             message: "Product updated successfully",
@@ -257,6 +263,39 @@ export const deleteProduct = async (req, res) => {
         return res.status(400).json({
             error: err.message
         });
+    }
+}
+
+export const getProductStatsByID = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user_id = req.user.sub;
+
+        const result = await getProductStatsByIDService({ id, user_id });
+
+        return res.status(200).json({
+            stats: result
+        });
+
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
+};
+
+export const updateProductAvailability = async (req, res) => {
+    try {
+        
+        const user_id = req.user.sub
+        const {id} = req.params
+
+        const result = await updateProductAvailabilityService({user_id, id})
+
+        return res.status(200).json({
+            product: result.product
+        })
+
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
     }
 }
 

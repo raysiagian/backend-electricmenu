@@ -117,8 +117,29 @@ export const createOrderService = async ({ shop_slug, buyer_name, items }) => {
 
 // User
 
-export const getOrdersByShopService = async ({ user_id, shop_id }) => {
-    if (!shop_id) throw new Error("shop_id is required");
+export const getOrdersByShopService = async ({ 
+    user_id, 
+    shop_id,
+    page = 1, 
+    limit = 10, 
+    sort, 
+    order,
+    status
+}) => {
+
+    // console.log(`${shop_id} and ${user_id}`)
+
+    if (!shop_id || !user_id) throw new Error("All field required");
+
+    const offset = (page - 1) * limit;
+
+    const allowedSort = ["id", "grand_total", "status", "created_at"];
+    const allowedOrder = ["ASC", "DESC"];
+    const safeSort = allowedSort.includes(sort) ? sort : "id";
+    const safeOrder = allowedOrder.includes(order.toUpperCase()) ? order.toUpperCase() : "DESC";
+
+
+    const allowedStatus = ["pending", "cancelled", "done"];
 
     // Cek shop milik user
     const shopCheck = await pool.query(
@@ -128,6 +149,19 @@ export const getOrdersByShopService = async ({ user_id, shop_id }) => {
     if (shopCheck.rows.length === 0) {
         throw new Error("Shop not found or not authorized");
     }
+
+    // Build kondisi WHERE dinamis
+    const conditions = [`o.shop_id = $1`];
+    const values = [shop_id];
+    let index = 2;
+
+    if (status && allowedStatus.includes(status)) {
+        conditions.push(`o.status = $${index}`);
+        values.push(status);
+        index++;
+    }
+
+    const whereClause = conditions.join(" AND ");
 
     const result = await pool.query(
         `SELECT 
@@ -148,13 +182,26 @@ export const getOrdersByShopService = async ({ user_id, shop_id }) => {
         FROM orders o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN products p ON oi.product_id = p.id
-        WHERE o.shop_id = $1
+        WHERE ${whereClause}
+        AND p.is_deleted = false
         GROUP BY o.id
-        ORDER BY o.created_at DESC`,
-        [shop_id]
+        ORDER BY o.${safeSort} ${safeOrder}
+        LIMIT $${index} OFFSET $${index + 1}`,
+        [...values, limit, offset]
     );
 
-    return result.rows;
+    const countResult = await pool.query(
+        `SELECT COUNT(*) FROM orders o
+        WHERE ${whereClause}`,
+        values
+    );
+
+    const total = parseInt(countResult.rows[0].count);
+
+    return {
+        orders: result.rows,
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+    };
 };
 
 export const updateOrderStatusService = async ({ user_id, order_id, status }) => {

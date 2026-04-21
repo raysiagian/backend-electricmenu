@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 
 const editNameLimiter = rateLimit({
     windowMs : 7 * 24 * 60 * 60 * 1000,
-    max: 3,
+    max: 1,
     message: {
         error: "You can  only change your name once a week"
     }
