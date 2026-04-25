@@ -1,5 +1,17 @@
 
-import { changePasswordService, registerAdminService, resendOTPRegistrationService, verifyOTPService, sendResetPasswordOTPService, registerUserService, loginService, refreshTokenService, logoutService, getProfileDataService  } from '../services/auth-service.js';
+import { 
+    changePasswordService, 
+    registerAdminService, 
+    resendOTPRegistrationService, 
+    resendResetPasswordOTPService, 
+    verifyOTPService, 
+    sendResetPasswordOTPService, 
+    registerUserService, 
+    loginService, 
+    refreshTokenService, 
+    logoutService, 
+    getProfileDataService  
+} from '../services/auth-service.js';
 
 
 
@@ -146,6 +158,16 @@ export const sendResetPasswordOTP = async (req, res) => {
     }
 }
 
+export const resendResetPasswordOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+        await resendResetPasswordOTPService({ email });
+        return res.status(200).json({ message: "OTP sent successfully" });
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
+};
+
 // change password
 export const changePassword = async (req, res) => {
     try {
@@ -215,7 +237,7 @@ export const verifyOTP = async (req, res) => {
         });
         }
 
-        await verifyOTPService(email, otp);
+        await verifyOTPService({email, otp});
 
         res.status(200).json({
         message: "Email verified successfully"

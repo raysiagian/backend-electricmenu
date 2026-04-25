@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import pool from '../config/db.js'
+import { sendForgotPasswordOTPEmail } from '../utils/send-forgot-password-otp-email.js';
 import { sendOTPEmail } from '../utils/send-otp-email.js'
 import { validateOTP } from "../utils/validate-otp.js";
 import { generateToken, generateRefreshToken } from '../utils/generate-token.js';
@@ -11,9 +12,13 @@ function randomOTPNumber(){
 }
 
 function normalizeEmail(email) {
-    if (!email) return null;
+    // if (!email) return null;
     return email.trim().toLowerCase();
 }
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 // register admin
 // create new admin account
@@ -22,6 +27,16 @@ export const registerAdminService = async ({ name, email, password }) => {
     if (!name || !email || !password) throw new Error ("All field are requiered")
 
     const normalizedEmail = normalizeEmail(email);
+
+    if (!emailRegex.test(normalizedEmail)) {
+        throw new Error("Invalid email format");
+    }
+
+    if (!passwordRegex.test(password)) {
+        throw new Error(
+            "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+        );
+    }
 
     // check email avaliablility
     const existingUser = await pool.query(
@@ -63,6 +78,16 @@ export const registerUserService = async ({name, email, password}) => {
     if (!name || !email || !password) throw new Error ("All field requiered")
 
     const normalizedEmail = normalizeEmail(email);
+
+    if (!emailRegex.test(normalizedEmail)) {
+        throw new Error("Invalid email format");
+    }
+
+    if (!passwordRegex.test(password)) {
+        throw new Error(
+            "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+        );
+    }
 
     // check email avaliablility
     const existingUser = await pool.query(
@@ -188,17 +213,69 @@ export const sendResetPasswordOTPService = async ({email}) => {
         [otp, otpExpired, normalizedEmail]
     );
 
-    await sendOTPEmail(normalizedEmail, otp);
+    await sendForgotPasswordOTPEmail(normalizedEmail, otp);
 
     return true;
 
 }
+
+export const resendResetPasswordOTPService = async ({ email }) => {
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) throw new Error("Email is required");
+
+    const result = await pool.query(
+        `SELECT id, email_verified, last_otp_request, otp_code
+        FROM users 
+        WHERE email = $1`,
+        [normalizedEmail]
+    );
+
+    if (result.rows.length === 0) throw new Error("User not found");
+
+    const user = result.rows[0];
+
+    // Pastikan user memang sedang dalam proses reset password
+    if (!user.otp_code) {
+        throw new Error("No password reset request found, please request again");
+    }
+
+    // Rate limit 1 menit
+    if (user.last_otp_request) {
+        const diff = Date.now() - new Date(user.last_otp_request).getTime();
+        if (diff < 60 * 1000) {
+            throw new Error("Please wait before requesting another OTP");
+        }
+    }
+
+    const otp = randomOTPNumber();
+    const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
+
+    await pool.query(
+        `UPDATE users 
+        SET otp_code = $1, otp_expired = $2, last_otp_request = NOW()
+        WHERE email = $3`,
+        [otp, otpExpired, normalizedEmail]
+    );
+
+    await sendForgotPasswordOTPEmail(normalizedEmail, otp); // ← pakai forgot password email
+
+    return true;
+};
 
 // change password admin & user
 export const changePasswordService = async ({ email, otp, password }) => {
 
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) throw new Error("Email is required");
+
+    console.log(`email: ${normalizedEmail}, otp: ${otp}, password: ${password}`)
+
+    if (!passwordRegex.test(password)) {
+    throw new Error(
+        "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+    );
+}
 
     // validate on validate-otp.js (on utils)
     await validateOTP({ email, otp: otp });
@@ -220,7 +297,7 @@ export const changePasswordService = async ({ email, otp, password }) => {
 
 
 // otp verification
-export const verifyOTPService = async (email, otp) => {
+export const verifyOTPService = async ({email, otp}) => {
 
     // validate on validate-otp.js (on utils)
     await validateOTP({ email, otp });
