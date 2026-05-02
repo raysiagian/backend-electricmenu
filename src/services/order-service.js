@@ -2,117 +2,244 @@ import pool from '../config/db.js'
 import { orderNotificationEmail } from '../utils/order-notification-email.js';
 
 // Public
+// export const createOrderService = async ({ shop_slug, buyer_name, items }) => {
+//     if (!shop_slug || !buyer_name || !items || items.length === 0) {
+//         throw new Error("shop_slug, buyer_name, and items are required");
+//     }
+
+//     // Ambil shop
+//     const shopResult = await pool.query(
+//         `SELECT id, shop_name FROM shops WHERE shop_slug = $1 AND is_deleted = false`,
+//         [shop_slug]
+//     );
+//     if (shopResult.rows.length === 0) throw new Error("Shop not found");
+
+//     const shop_id = shopResult.rows[0].id;
+//     const shop_name = shopResult.rows[0].shop_name;
+
+//     let grand_total = 0;
+//     const validatedItems = [];
+
+//     // Validasi setiap item
+//     for (const item of items) {
+//         const { product_id, quantity } = item;
+
+//         if (!product_id || !quantity || quantity < 1) {
+//             throw new Error("Each item must have product_id and quantity (min 1)");
+//         }
+
+//         const productResult = await pool.query(
+//             `SELECT id, shop_id, product_name, price, stock, service_type, is_available, is_deleted
+//             FROM products 
+//             WHERE id = $1 AND shop_id = $2`,
+//             [product_id, shop_id]
+//         );
+
+//         if (productResult.rows.length === 0) {
+//             throw new Error(`Product ${product_id} not found`);
+//         }
+
+//         const product = productResult.rows[0];
+
+//         if (product.is_deleted) throw new Error(`Product ${product_id} is no longer available`);
+//         if (!product.is_available) throw new Error(`Product ${product_id} is currently unavailable`);
+
+//         if (product.service_type === "product") {
+//             if (product.stock < quantity) {
+//                 throw new Error(`Insufficient stock for product ${product_id}. Available: ${product.stock}`);
+//             }
+//         }
+
+//         const total_price = product.price * quantity;
+//         grand_total += Number(total_price);
+//         validatedItems.push({ product, quantity, total_price });
+//     }
+
+//     // Buat order header
+//     const orderResult = await pool.query(
+//         `INSERT INTO orders (shop_id, buyer_name, grand_total)
+//         VALUES ($1, $2, $3)
+//          RETURNING *`,
+//         [shop_id, buyer_name, grand_total]
+//     );
+//     const order = orderResult.rows[0];
+
+//     // Buat order items + kurangi stock
+//     for (const { product, quantity, total_price } of validatedItems) {
+//         await pool.query(
+//             `INSERT INTO order_items (order_id, product_id, quantity, price, total_price)
+//             VALUES ($1, $2, $3, $4, $5)`,
+//             [order.id, product.id, quantity, product.price, total_price]
+//         );
+
+//         if (product.service_type === "product") {
+//             await pool.query(
+//                 `UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
+//                 [quantity, product.id]
+//             );
+//         }
+//     }
+
+//     // Ambil email owner
+//     const userResult = await pool.query(
+//         `SELECT u.email 
+//         FROM users u
+//         JOIN shops s ON s.user_id = u.id
+//         WHERE s.id = $1`,
+//         [shop_id]
+//     );
+
+//     if (userResult.rows.length === 0) throw new Error("Owner not found");
+//     const owner_email = userResult.rows[0].email;
+
+//     // Kirim email notifikasi
+//     await orderNotificationEmail({
+//         ownerEmail: owner_email,
+//         shopName: shop_name,
+//         buyerName: buyer_name,
+//         items: validatedItems.map(i => ({
+//             product_name: i.product.product_name,
+//             quantity: i.quantity,
+//             total_price: i.total_price
+//         })),
+//         grandTotal: grand_total
+//     });
+
+//     return {
+//         ...order,
+//         items: validatedItems.map(i => ({
+//             product_id: i.product.id,
+//             quantity: i.quantity,
+//             total_price: i.total_price
+//         }))
+//     };
+// };
+
 export const createOrderService = async ({ shop_slug, buyer_name, items }) => {
     if (!shop_slug || !buyer_name || !items || items.length === 0) {
         throw new Error("shop_slug, buyer_name, and items are required");
     }
 
-    // Ambil shop
-    const shopResult = await pool.query(
-        `SELECT id, shop_name FROM shops WHERE shop_slug = $1 AND is_deleted = false`,
-        [shop_slug]
-    );
-    if (shopResult.rows.length === 0) throw new Error("Shop not found");
+    // Ambil koneksi dari pool untuk transaction
+    const client = await pool.connect();
 
-    const shop_id = shopResult.rows[0].id;
-    const shop_name = shopResult.rows[0].shop_name;
+    try {
+        await client.query("BEGIN"); // ← mulai transaction
 
-    let grand_total = 0;
-    const validatedItems = [];
-
-    // Validasi setiap item
-    for (const item of items) {
-        const { product_id, quantity } = item;
-
-        if (!product_id || !quantity || quantity < 1) {
-            throw new Error("Each item must have product_id and quantity (min 1)");
-        }
-
-        const productResult = await pool.query(
-            `SELECT id, shop_id, product_name, price, stock, service_type, is_available, is_deleted
-            FROM products 
-            WHERE id = $1 AND shop_id = $2`,
-            [product_id, shop_id]
+        const shopResult = await client.query(
+            `SELECT id, shop_name FROM shops WHERE shop_slug = $1 AND is_deleted = false`,
+            [shop_slug]
         );
+        if (shopResult.rows.length === 0) throw new Error("Shop not found");
 
-        if (productResult.rows.length === 0) {
-            throw new Error(`Product ${product_id} not found`);
+        const shop_id = shopResult.rows[0].id;
+        const shop_name = shopResult.rows[0].shop_name;
+
+        let grand_total = 0;
+        const validatedItems = [];
+
+        for (const item of items) {
+            const { product_id, quantity } = item;
+
+            if (!product_id || !quantity || quantity < 1) {
+                throw new Error("Each item must have product_id and quantity (min 1)");
+            }
+
+            // ← FOR UPDATE: lock baris ini, request lain harus tunggu sampai transaction selesai
+            const productResult = await client.query(
+                `SELECT id, shop_id, product_name, price, stock, service_type, is_available, is_deleted
+                FROM products 
+                WHERE id = $1 AND shop_id = $2
+                FOR UPDATE`,
+                [product_id, shop_id]
+            );
+
+            if (productResult.rows.length === 0) {
+                throw new Error(`Product ${product_id} not found`);
+            }
+
+            const product = productResult.rows[0];
+
+            if (product.is_deleted) throw new Error(`Product ${product_id} is no longer available`);
+            if (!product.is_available) throw new Error(`Product ${product_id} is currently unavailable`);
+
+            if (product.service_type === "product") {
+                // ← cek stock SETELAH lock, data sudah pasti fresh
+                if (product.stock < quantity) {
+                    throw new Error(`Insufficient stock for product "${product.product_name}". Available: ${product.stock}`);
+                }
+            }
+
+            const total_price = product.price * quantity;
+            grand_total += Number(total_price);
+            validatedItems.push({ product, quantity, total_price });
         }
 
-        const product = productResult.rows[0];
+        // Buat order header
+        const orderResult = await client.query(
+            `INSERT INTO orders (shop_id, buyer_name, grand_total)
+            VALUES ($1, $2, $3)
+            RETURNING *`,
+            [shop_id, buyer_name, grand_total]
+        );
+        const order = orderResult.rows[0];
 
-        if (product.is_deleted) throw new Error(`Product ${product_id} is no longer available`);
-        if (!product.is_available) throw new Error(`Product ${product_id} is currently unavailable`);
+        // Buat order items + kurangi stock
+        for (const { product, quantity, total_price } of validatedItems) {
+            await client.query(
+                `INSERT INTO order_items (order_id, product_id, quantity, price, total_price)
+                VALUES ($1, $2, $3, $4, $5)`,
+                [order.id, product.id, quantity, product.price, total_price]
+            );
 
-        if (product.service_type === "product") {
-            if (product.stock < quantity) {
-                throw new Error(`Insufficient stock for product ${product_id}. Available: ${product.stock}`);
+            if (product.service_type === "product") {
+                await client.query(
+                    `UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
+                    [quantity, product.id]
+                );
             }
         }
 
-        const total_price = product.price * quantity;
-        grand_total += Number(total_price);
-        validatedItems.push({ product, quantity, total_price });
-    }
+        await client.query("COMMIT"); // ← semua berhasil, simpan perubahan
 
-    // Buat order header
-    const orderResult = await pool.query(
-        `INSERT INTO orders (shop_id, buyer_name, grand_total)
-        VALUES ($1, $2, $3)
-         RETURNING *`,
-        [shop_id, buyer_name, grand_total]
-    );
-    const order = orderResult.rows[0];
-
-    // Buat order items + kurangi stock
-    for (const { product, quantity, total_price } of validatedItems) {
-        await pool.query(
-            `INSERT INTO order_items (order_id, product_id, quantity, price, total_price)
-            VALUES ($1, $2, $3, $4, $5)`,
-            [order.id, product.id, quantity, product.price, total_price]
+        // Ambil email owner (di luar transaction, tidak perlu lock)
+        const userResult = await pool.query(
+            `SELECT u.email 
+            FROM users u
+            JOIN shops s ON s.user_id = u.id
+            WHERE s.id = $1`,
+            [shop_id]
         );
 
-        if (product.service_type === "product") {
-            await pool.query(
-                `UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2`,
-                [quantity, product.id]
-            );
-        }
+        if (userResult.rows.length === 0) throw new Error("Owner not found");
+
+        await orderNotificationEmail({
+            ownerEmail: userResult.rows[0].email,
+            shopName: shop_name,
+            buyerName: buyer_name,
+            items: validatedItems.map(i => ({
+                product_name: i.product.product_name,
+                quantity: i.quantity,
+                total_price: i.total_price
+            })),
+            grandTotal: grand_total
+        });
+
+        return {
+            ...order,
+            items: validatedItems.map(i => ({
+                product_id: i.product.id,
+                quantity: i.quantity,
+                total_price: i.total_price
+            }))
+        };
+
+    } catch (err) {
+        await client.query("ROLLBACK"); // ← ada error, batalkan semua perubahan
+        throw err;
+    } finally {
+        client.release(); // ← kembalikan koneksi ke pool
     }
-
-    // Ambil email owner
-    const userResult = await pool.query(
-        `SELECT u.email 
-        FROM users u
-        JOIN shops s ON s.user_id = u.id
-        WHERE s.id = $1`,
-        [shop_id]
-    );
-
-    if (userResult.rows.length === 0) throw new Error("Owner not found");
-    const owner_email = userResult.rows[0].email;
-
-    // Kirim email notifikasi
-    await orderNotificationEmail({
-        ownerEmail: owner_email,
-        shopName: shop_name,
-        buyerName: buyer_name,
-        items: validatedItems.map(i => ({
-            product_name: i.product.product_name,
-            quantity: i.quantity,
-            total_price: i.total_price
-        })),
-        grandTotal: grand_total
-    });
-
-    return {
-        ...order,
-        items: validatedItems.map(i => ({
-            product_id: i.product.id,
-            quantity: i.quantity,
-            total_price: i.total_price
-        }))
-    };
 };
 
 // User
