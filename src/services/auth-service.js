@@ -55,12 +55,15 @@ export const registerAdminService = async ({ name, email, password }) => {
     // set toke expored 5 minutes
     const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
+    // hashed otp
+    const hashedOTP = await bcrypt.hash(String(generatedOTP), 10);
+
     // save user
     await pool.query(
         `INSERT INTO users 
         (role_id, name, email, password, otp_code, otp_expired, email_verified)
         VALUES (1, $1, $2, $3, $4, $5, $6)`,
-        [name, normalizedEmail, hashedPassword, generatedOTP, otpExpired, false]
+        [name, normalizedEmail, hashedPassword, hashedOTP, otpExpired, false]
     );
 
     await sendOTPEmail(normalizedEmail, generatedOTP);
@@ -106,12 +109,15 @@ export const registerUserService = async ({name, email, password}) => {
     // set toke expored 5 minutes
     const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
+    // hashed otp
+    const hashedOTP = await bcrypt.hash(String(generatedOTP), 10);
+
     // save user
     await pool.query(
         `INSERT INTO users 
         (role_id, name, email, password, otp_code, otp_expired, email_verified)
         VALUES (2, $1, $2, $3, $4, $5, $6)`,
-        [name, normalizedEmail, hashedPassword, generatedOTP, otpExpired, false]
+        [name, normalizedEmail, hashedPassword, hashedOTP, otpExpired, false]
     );
 
     await sendOTPEmail(normalizedEmail, generatedOTP);
@@ -159,13 +165,16 @@ export const resendOTPRegistrationService = async ({email}) => {
     const otp = randomOTPNumber();
     const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
+    // hashed otp
+    const hashedOTP = await bcrypt.hash(String(otp), 10);
+
     await pool.query(
         `UPDATE users
             SET otp_code = $1,
                 otp_expired = $2,
                 last_otp_request = NOW()
             WHERE email = $3`,
-        [otp, otpExpired, normalizedEmail]
+        [hashedOTP, otpExpired, normalizedEmail]
     );
 
     await sendOTPEmail(normalizedEmail, otp);
@@ -206,11 +215,14 @@ export const sendResetPasswordOTPService = async ({email}) => {
     const otp = randomOTPNumber();
     const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
+    // hashed otp
+    const hashedOTP = await bcrypt.hash(String(otp), 10);
+
     await pool.query(
         `UPDATE users 
         SET otp_code = $1, otp_expired = $2, last_otp_request = NOW()
         WHERE email = $3`,
-        [otp, otpExpired, normalizedEmail]
+        [hashedOTP, otpExpired, normalizedEmail]
     );
 
     await sendForgotPasswordOTPEmail(normalizedEmail, otp);
@@ -251,11 +263,14 @@ export const resendResetPasswordOTPService = async ({ email }) => {
     const otp = randomOTPNumber();
     const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
 
+    // hashed otp
+    const hashedOTP = await bcrypt.hash(String(otp), 10);
+
     await pool.query(
         `UPDATE users 
         SET otp_code = $1, otp_expired = $2, last_otp_request = NOW()
         WHERE email = $3`,
-        [otp, otpExpired, normalizedEmail]
+        [hashedOTP, otpExpired, normalizedEmail]
     );
 
     await sendForgotPasswordOTPEmail(normalizedEmail, otp); // ← pakai forgot password email
@@ -264,21 +279,55 @@ export const resendResetPasswordOTPService = async ({ email }) => {
 };
 
 // change password admin & user
-export const changePasswordService = async ({ email, otp, password }) => {
+// export const changePasswordService = async ({ email, otp, password }) => {
 
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) throw new Error("Email is required");
+//     const normalizedEmail = normalizeEmail(email);
+//     if (!normalizedEmail) throw new Error("Email is required");
 
-    console.log(`email: ${normalizedEmail}, otp: ${otp}, password: ${password}`)
+
+//     if (!passwordRegex.test(password)) {
+//     throw new Error(
+//         "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+//     );
+// }
+
+//     // validate on validate-otp.js (on utils)
+//     await validateOTP({ email, otp: otp });
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     await pool.query(
+//         `UPDATE users 
+//         SET password = $1,
+//             otp_code = NULL,
+//             otp_expired = NULL
+//         WHERE email = $2`,
+//         [hashedPassword, normalizedEmail]
+//     );
+
+//     return true;
+// };
+
+export const changePasswordService = async ({ email, otp, password, confirmPassword }) => {
+
+    if (!email || !otp || !password || !confirmPassword) {
+        throw new Error("All fields are required");
+    }
+
+    if (password !== confirmPassword) {
+        throw new Error("Password and confirm password do not match");
+    }
 
     if (!passwordRegex.test(password)) {
-    throw new Error(
-        "Password must be at least 8 characters and include uppercase, lowercase, and a number"
-    );
-}
+        throw new Error(
+            "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+        );
+    }
 
-    // validate on validate-otp.js (on utils)
-    await validateOTP({ email, otp: otp });
+    const normalizedEmail = normalizeEmail(email);
+
+    // validasi OTP (query DB + expired + bcrypt compare)
+    await validateOTP({ email: normalizedEmail, otp });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -295,12 +344,13 @@ export const changePasswordService = async ({ email, otp, password }) => {
 };
 
 
-
 // otp verification
 export const verifyOTPService = async ({email, otp}) => {
 
     // validate on validate-otp.js (on utils)
     await validateOTP({ email, otp });
+
+    const normalizedEmail = normalizeEmail(email);
 
     await pool.query(
         `UPDATE users 
@@ -308,7 +358,7 @@ export const verifyOTPService = async ({email, otp}) => {
             otp_code = NULL,
             otp_expired = NULL
         WHERE email = $1`,
-        [email.trim().toLowerCase()]
+        [normalizedEmail]
     );
 
     return true;
@@ -351,6 +401,9 @@ export const loginService = async ({ email, password }) => {
 
         const otp = randomOTPNumber();
         const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
+
+        // hashed otp
+        const hashedOTP = await bcrypt.hash(String(otp), 10);
 
         await pool.query(
             `UPDATE users 

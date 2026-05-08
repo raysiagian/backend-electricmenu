@@ -1,5 +1,5 @@
 
-import { createOrderService, getOrdersByShopService, updateOrderStatusService } from "../services/order-service.js";
+import { createOrderService, getOrdersByShopService, updateOrderStatusService, getUserPendingOrdersService } from "../services/order-service.js";
 
 // Public
 export const createOrder = async (req, res) => {
@@ -55,6 +55,24 @@ export const getOrdersByShop = async (req, res) => {
         return res.status(400).json({ error: err.message });
     }
 };
+
+export const getUserPendingOrders = async (req, res) => {
+    try {
+        const user_id = req.user.sub;
+        const {limit = 5} = req.query
+
+        const orders = await getUserPendingOrdersService({user_id, limit})
+
+        res.status(200).json({
+            orders
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+}
 
 export const updateOrderStatus = async (req, res) => {
     try {

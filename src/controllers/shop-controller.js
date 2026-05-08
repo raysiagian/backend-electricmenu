@@ -47,10 +47,25 @@ export const getUserShops = async (req, res) => {
         
         const user_id = req.user.sub
 
-        const result = await getUserShopsService ({user_id})
+        const {
+            page = 1,
+            limit = 10,
+            sort = "created_at",
+            order = "desc"
+        } = req.query;
+
+        const result = await getUserShopsService ({
+            user_id,
+            page: Number(page),
+            limit: Number(limit),
+            sort,
+            order
+        })
 
         return res.status(200).json({
-            shop: result.shop
+            message: "Shops retrieved successfully",
+            shops: result.shops,
+            pagination: result.pagination
         });
 
     } catch (err) {
