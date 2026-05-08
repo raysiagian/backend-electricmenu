@@ -38,6 +38,7 @@ export const searchShopbyUserIDService = async ({user_id, search, page, limit, s
         `SELECT COUNT(*) 
         FROM shops
         WHERE user_id = $1
+        AND is_deleted = false
         AND shop_name ILIKE $2`,
         [user_id, `%${search}%`]
     )
@@ -55,22 +56,58 @@ export const searchShopbyUserIDService = async ({user_id, search, page, limit, s
     }
 }
 
-export const getUserShopsService = async ({user_id}) => {
-    if(!user_id)  throw new Error("id is required");
+export const getUserShopsService = async ({
+    user_id,
+    page = 1,
+    limit = 10,
+    sort = "created_at",
+    order = "DESC"
+}) => {
+    if (!user_id) throw new Error("user_id is required");
 
+    const offset = (page - 1) * limit;
+
+    // hanya field yang ada di tabel shops
+    const allowedSort = ["created_at", "shop_name"];
+    const allowedOrder = ["ASC", "DESC"];
+
+    const safeSort = allowedSort.includes(sort) ? sort : "created_at";
+    const safeOrder = allowedOrder.includes(order.toUpperCase())
+        ? order.toUpperCase()
+        : "DESC";
+
+    // query data dengan pagination
     const result = await pool.query(
-        `SELECT user_id, id, shop_name, shop_slug, qr_url
-        FROM shops
-        WHERE user_id = $1
-        AND is_deleted = false`,
-        [user_id]
-    )
-        
-    return {
-        shop: result.rows
-    };
+        `SELECT id, shop_name, shop_slug, qr_url, created_at
+         FROM shops
+         WHERE user_id = $1
+         AND is_deleted = false
+         ORDER BY ${safeSort} ${safeOrder}
+         LIMIT $2 OFFSET $3`,
+        [user_id, limit, offset]
+    );
 
-}
+    // query total untuk pagination
+    const count = await pool.query(
+        `SELECT COUNT(*) 
+         FROM shops
+         WHERE user_id = $1
+         AND is_deleted = false`,
+        [user_id]
+    );
+
+    const total = Number(count.rows[0].count);
+
+    return {
+        shops: result.rows,
+        pagination: {
+            total,
+            page,
+            limit,
+            total_pages: Math.ceil(total / limit)
+        }
+    };
+};
 
 // create shop
 export const createShopService = async ({user_id, shop_name}) => {

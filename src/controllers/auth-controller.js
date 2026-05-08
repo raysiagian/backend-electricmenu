@@ -169,60 +169,21 @@ export const resendResetPasswordOTP = async (req, res) => {
 };
 
 // change password
+
 export const changePassword = async (req, res) => {
     try {
-        
-        const {email, otp, password, confirmPassword} = req.body;
+        const { email, otp, password, confirmPassword } = req.body;
 
-        if (!email || !otp || !password || !confirmPassword) {
-            return res.status(400).json({
-                message: "All fields are required"
-            });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                message: "Password must be at least 8 characters"
-            });
-        }
-
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()[\]{}\-_=+|\\:;"'<>,./~`]).{8,}$/;
-
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({
-                message:
-                    "Password must contain uppercase, lowercase, number, and special character"
-            });
-        }
-
-        if(password !== confirmPassword){
-            return res.status(400).json({
-                message: "Password and Confirm Password must be same"
-            })
-        }
-
-        await changePasswordService({ email, otp, password });
+        await changePasswordService({ email, otp, password, confirmPassword });
 
         res.status(200).json({
             message: "Password successfully changed",
         });
 
-
     } catch (err) {
-
-        if (
-            err.message === "User not found" ||
-            err.message === "Invalid OTP" ||
-            err.message === "OTP expired"
-        ) {
-            return res.status(400).json({ message: err.message });
-        }
-
-        res.status(500).json({
-            error: err.message
-        });
+        return res.status(400).json({ error: err.message });
     }
-}
+};
 
 
 

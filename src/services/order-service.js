@@ -331,6 +331,43 @@ export const getOrdersByShopService = async ({
     };
 };
 
+export const getUserPendingOrdersService = async ({user_id, limit}) => {
+    if(!user_id) throw new Error("user id required");
+
+    const result = await pool.query(
+        `SELECT
+            o.id,
+            o.buyer_name,
+            o.created_at,
+            s.shop_name,
+            o.grand_total,
+            json_agg(
+                json_build_object(
+                    'product_name', p.product_name,
+                    'product_image_url', p.product_image_url,
+                    'price', oi.price,
+                    'quantity', oi.quantity,
+                    'total_price', oi.total_price
+                )
+            ) AS items
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN products p ON oi.product_id = p.id
+        JOIN shops s ON o.shop_id = s.id
+        WHERE s.user_id = $1
+        AND o.status = 'pending'
+        AND p.is_deleted = false
+        AND s.is_deleted = false
+        GROUP BY o.id, s.shop_name
+        ORDER BY o.created_at DESC
+        LIMIT $2
+        `,
+        [user_id, limit]
+    )
+
+    return result.rows;
+}
+
 export const updateOrderStatusService = async ({ user_id, order_id, status }) => {
     const allowed = ["pending", "cancelled", "done"];
     if (!allowed.includes(status)) {

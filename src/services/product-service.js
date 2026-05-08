@@ -333,6 +333,8 @@ export const searchProductByShopIDService = async ({
             product_image_url,
             price,
             stock,
+            service_type,
+            is_available,
             created_at
         FROM products
         WHERE shop_id = $1
