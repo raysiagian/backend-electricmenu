@@ -308,7 +308,7 @@ export const resendResetPasswordOTPService = async ({ email }) => {
 //     return true;
 // };
 
-export const changePasswordService = async ({ email, otp, password, confirmPassword }) => {
+export const resetPasswordService = async ({ email, otp, password, confirmPassword }) => {
 
     if (!email || !otp || !password || !confirmPassword) {
         throw new Error("All fields are required");
@@ -409,7 +409,7 @@ export const loginService = async ({ email, password }) => {
             `UPDATE users 
             SET otp_code = $1, otp_expired = $2, last_otp_request = NOW()
             WHERE email = $3`,
-            [otp, otpExpired, normalizedEmail]
+            [hashedOTP, otpExpired, normalizedEmail]
         );
 
         await sendOTPEmail(normalizedEmail, otp);
@@ -500,23 +500,85 @@ export const logoutService = async ({ id }) => {
     return true;
 };
 
-
-export const getProfileDataService = async ({ user_id }) => {
-
-    if (!user_id) throw new Error("User ID is required");
+export const sendChangePasswordOTPService = async ({ email }) => {
+    const normalizedEmail = normalizeEmail(email);
 
     const result = await pool.query(
-        `SELECT id, name, email, role_id
-        FROM users
-        WHERE id = $1`,
-        [user_id]
+        `SELECT id, last_otp_request FROM users WHERE email = $1 AND is_deleted = false`,
+        [normalizedEmail]
     );
 
-    if (result.rows.length === 0) {
-        throw new Error("User not found");
+    if (result.rows.length === 0) throw new Error("User not found");
+
+    const user = result.rows[0];
+
+    if (user.last_otp_request) {
+        const diff = Date.now() - new Date(user.last_otp_request).getTime();
+        if (diff < 60 * 1000) throw new Error("Please wait before requesting another OTP");
     }
 
-    return {
-        user: result.rows[0]
-    };
+    const otp = randomOTPNumber();
+    const otpExpired = new Date(Date.now() + 5 * 60 * 1000);
+    const hashedOTP = await bcrypt.hash(String(otp), 10);
+
+    await pool.query(
+        `UPDATE users 
+        SET otp_code = $1, otp_expired = $2, last_otp_request = NOW()
+        WHERE email = $3`,
+        [hashedOTP, otpExpired, normalizedEmail]
+    );
+
+    await sendChangePasswordOTPEmail(normalizedEmail, otp);
+    return true;
+};
+
+export const verifyOTPChangePasswordService = async ({ email, otp }) => {
+    await validateOTP({ email, otp });
+
+    // bersihkan OTP setelah verified
+    const normalizedEmail = normalizeEmail(email);
+    await pool.query(
+        `UPDATE users SET otp_code = NULL, otp_expired = NULL WHERE email = $1`,
+        [normalizedEmail]
+    );
+
+    return true;
+}
+
+export const changePasswordService = async ({ id, email, current_password, new_password, confirm_new_password }) => {
+    if (!id || !current_password || !new_password || !confirm_new_password) {
+        throw new Error("All fields required");
+    }
+
+    if (new_password !== confirm_new_password) {
+        throw new Error("New password and confirm new password don't match");
+    }
+
+    if (!passwordRegex.test(new_password)) {
+        throw new Error("Password must be at least 8 characters and include uppercase, lowercase, and a number");
+    }
+
+    // ambil password lama dari DB
+    const result = await pool.query(
+        `SELECT id, password FROM users WHERE id = $1 AND is_deleted = false`,
+        [id]
+    );
+
+    if (result.rows.length === 0) throw new Error("User not found");
+
+    const user = result.rows[0];
+
+    // verifikasi password lama
+    const isValid = await bcrypt.compare(current_password, user.password);
+    if (!isValid) throw new Error("Current password is incorrect");
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    const normalizedEmail = normalizeEmail(email);
+    await pool.query(
+        `UPDATE users SET password = $1 WHERE email = $2`,
+        [hashedPassword, normalizedEmail]
+    );
+
+    return true;
 };

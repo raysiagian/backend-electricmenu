@@ -1,6 +1,6 @@
 
 import { 
-    changePasswordService, 
+    resetPasswordService, 
     registerAdminService, 
     resendOTPRegistrationService, 
     resendResetPasswordOTPService, 
@@ -9,8 +9,10 @@ import {
     registerUserService, 
     loginService, 
     refreshTokenService, 
-    logoutService, 
-    getProfileDataService  
+    logoutService,
+    sendChangePasswordOTPService,
+    verifyOTPChangePasswordService,
+    changePasswordService, 
 } from '../services/auth-service.js';
 
 
@@ -141,7 +143,7 @@ export const resendRegisterOTP = async (req, res) => {
 export const sendResetPasswordOTP = async (req, res) => {
     try {
         
-        const {email} = req.body
+        const email = req.user.email
 
         if(!email){
             return res.status(400).json({message: "All fields are required"})
@@ -170,11 +172,11 @@ export const resendResetPasswordOTP = async (req, res) => {
 
 // change password
 
-export const changePassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
     try {
         const { email, otp, password, confirmPassword } = req.body;
 
-        await changePasswordService({ email, otp, password, confirmPassword });
+        await resetPasswordService({ email, otp, password, confirmPassword });
 
         res.status(200).json({
             message: "Password successfully changed",
@@ -237,6 +239,7 @@ export const login = async (req, res) => {
         return res.status(200).json({
             message: "Login successful",
             token: result.token,
+            refreshToken: result.refreshToken, 
             emailVerified: true,
             user: {
                 name: result.user.name,
@@ -268,7 +271,7 @@ export const login = async (req, res) => {
 // logout
 export const logout = async (req, res) => {
     try {
-        const { id } = req.user.sub // atau ambil dari token yang sudah di-decode middleware
+        const id  = req.user.sub // atau ambil dari token yang sudah di-decode middleware
         await logoutService({ id });
         res.json({ success: true, message: "Logged out successfully" });
     } catch (error) {
@@ -287,19 +290,55 @@ export const refreshToken = async (req, res) => {
     }
 };
 
-export const getProfileData = async (req, res) => {
-    try{
-        const user_id = req.user.sub;
+// Step 1 — kirim OTP, email dari token
+export const sendChangePasswordOTP = async (req, res) => {
+    try {
+        const email = req.user.email; // ← dari token, bukan body
 
-        const result = await getProfileDataService({ user_id });
+        await sendChangePasswordOTPService({ email });
 
-        return res.status(200).json({
-            user: result.user
-        });
-
-    }catch(err){
-        return res.status(400).json({
-            error: err.message
-        });
+        res.status(200).json({ message: "OTP sent to your email" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
-}
+};
+
+// Step 2 — verifikasi OTP
+export const verifyOTPChangePassword = async (req, res) => {
+    try {
+        const email = req.user.email; // ← dari token
+        const { otp } = req.body;     // ← hanya OTP dari body
+
+        if (!otp) {
+            return res.status(400).json({ error: "OTP is required" });
+        }
+
+        await verifyOTPChangePasswordService({ email, otp });
+
+        res.status(200).json({ message: "OTP verified successfully" });
+    } catch (err) {
+        if (err.message === "OTP expired") {
+            return res.status(400).json({ error: err.message });
+        }
+        if (err.message === "Invalid OTP") {
+            return res.status(400).json({ error: err.message });
+        }
+        res.status(500).json({ error: err.message });
+    }
+};
+
+
+// Step 3 — ganti password
+export const changePassword = async (req, res) => {
+    try {
+        const id = req.user.sub;
+        const email = req.user.email; // ← dari token
+        const { current_password, new_password, confirm_new_password } = req.body;
+
+        await changePasswordService({ id, email, current_password, new_password, confirm_new_password });
+
+        res.status(200).json({ message: "Password successfully changed" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};

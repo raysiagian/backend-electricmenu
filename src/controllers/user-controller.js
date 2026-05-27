@@ -1,4 +1,9 @@
-import { activatedUserAccountAdminService, deactivatedUserAccountAdminService, editNameService } from "../services/user-service.js"
+import { 
+    activatedUserAccountAdminService, 
+    deactivatedUserAccountAdminService, 
+    editNameService,
+    getProfileDataService
+} from "../services/user-service.js"
 
 
 // user and admin
@@ -64,3 +69,19 @@ export const activatedUserAccountAdmin = async (req, res) => {
     }
 }
 
+export const getProfileData = async (req, res) => {
+    try{
+        const user_id = req.user.sub;
+
+        const result = await getProfileDataService({ user_id });
+
+        return res.status(200).json({
+            user: result.user
+        });
+
+    }catch(err){
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+}

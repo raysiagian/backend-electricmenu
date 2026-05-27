@@ -1,6 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/auth-middleware.js";
-import { editName } from "../controllers/user-controller.js";
+import { editName, getProfileData } from "../controllers/user-controller.js";
 import rateLimit from "express-rate-limit";
 
 const editNameLimiter = rateLimit({
@@ -13,6 +13,7 @@ const editNameLimiter = rateLimit({
 
 const router = express.Router()
 
+router.get("/profile", protect, getProfileData);
 router.patch("/manage-account/edit-name", protect, editNameLimiter, editName)
 
 export default router;

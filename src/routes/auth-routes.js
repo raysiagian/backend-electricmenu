@@ -1,8 +1,7 @@
 import express from "express"
 import { protect } from "../middleware/auth-middleware.js";
 import { 
-    getProfileData, 
-    changePassword, 
+    resetPassword, 
     login, 
     logout, 
     registerAdmin, 
@@ -11,6 +10,9 @@ import {
     sendResetPasswordOTP,
     resendResetPasswordOTP, 
     verifyOTP,
+    refreshToken,
+    verifyOTPChangePassword,
+    changePassword
 } from "../controllers/auth-controller.js"
 import rateLimit from "express-rate-limit";
 
@@ -46,10 +48,16 @@ const verifyOtpLimiter = rateLimit({
     message: "Too many OTP attempts. Please try again later."
 });
 
-const changePasswordLimiter = rateLimit ({
+const resetPasswordLimiter = rateLimit ({
     windowMs: 5 * 60 * 1000, // 5 menit
     max: 3,
     message: "Too many reset password request. Please try later"
+})
+
+const changePasswordLimiter = rateLimit ({
+    windowMs: 5 * 60 * 1000, // 5 menit
+    max: 3,
+    message: "Too many change password request. Please try later"
 })
 
 // const verifyResetPasswordOTPLimiter = rateLimit({
@@ -61,18 +69,22 @@ const changePasswordLimiter = rateLimit ({
 
 const router = express.Router()
 
-router.get("/profile", protect, getProfileData);
 
 router.post("/register-admin",registerLimiter, registerAdmin)
 router.post("/register-user",registerLimiter, registerUser)
 router.post("/verify-otp", verifyOtpLimiter, verifyOTP);
 router.post("/resend-otp",otpLimiter, resendRegisterOTP);
+router.post("/refresh-token", refreshToken);
 
 router.post("/reset-password-otp", otpLimiter, sendResetPasswordOTP);
 router.post("/resend-reset-password-otp",otpLimiter, resendResetPasswordOTP)
-router.patch("/change-password",changePasswordLimiter, changePassword)
+router.patch("/reset-password",resetPasswordLimiter, resetPassword)
+
+router.post("/change-password/send-otp",otpLimiter,protect, sendResetPasswordOTP);
+router.post("/change-password/verify-otp",otpLimiter,protect, verifyOTPChangePassword);
+router.post("/change-password/confirm",changePasswordLimiter,protect, changePassword);
 
 router.post("/login", loginLimiter, login)
-router.post("/logout", logout)
+router.post("/logout",protect, logout)
 
 export default router
