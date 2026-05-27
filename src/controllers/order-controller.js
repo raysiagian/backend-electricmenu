@@ -1,5 +1,5 @@
 
-import { createOrderService, getOrdersByShopService, updateOrderStatusService, getUserPendingOrdersService } from "../services/order-service.js";
+import { createOrderService, getOrdersByShopService, updateOrderStatusService, getUserPendingOrdersService, createWalkInOrderService } from "../services/order-service.js";
 
 // Public
 export const createOrder = async (req, res) => {
@@ -14,12 +14,27 @@ export const createOrder = async (req, res) => {
         return res.status(200).json({ success: true, order });
     } catch (err) {
         console.error("createOrder error:", err.message);
-        return res.status(400).json({ error: err.message });
+        return res.status(500).json({ error: err.message });
     }
 };
 
 
 // User
+
+export const createWalkInOrder = async (req, res) => {
+    try {
+        const { shop_id } = req.params;
+        const user_id = req.user.sub;
+        const { buyer_name, items } = req.body;
+
+        const order = await createWalkInOrderService({user_id, shop_id, buyer_name, items})
+        return res.status(200).json({ success: true, order });
+        
+    } catch (err) {
+        console.error("createOrder error:", err.message);
+        return res.status(400).json({ error: err.message });
+    }
+}
 
 export const getOrdersByShop = async (req, res) => {
     try {
@@ -52,7 +67,7 @@ export const getOrdersByShop = async (req, res) => {
         });
 
     } catch (err) {
-        return res.status(400).json({ error: err.message });
+        return res.status(500).json({ error: err.message });
     }
 };
 

@@ -9,12 +9,18 @@ const createShopLimiter = rateLimit({
     message: "Too many create shop request, please try again later"
 })
 
+const editShopLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 1,
+    message: "Too many edit shop request, please try again later"
+})
+
 
 const router = express.Router()
 
 // private
 router.post("/create-shop", createShopLimiter, protect, createShop)
-router.patch("/edit-shops/:id", protect, editShop)
+router.patch("/edit-shops/:id",editShopLimiter, protect, editShop)
 router.delete("/delete-shop/:id", protect, deleteShop)
 router.get("/search", protect, searchShopbyUserID)
 router.get("/get-shops", protect, getUserShops)

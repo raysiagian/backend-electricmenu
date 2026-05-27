@@ -532,7 +532,7 @@ export const editProductService = async ({ id, user_id, payload, file }) => {
     // Validasi enum service_type
     if (
         payload.service_type &&
-        !["products", "service"].includes(payload.service_type)
+        !["product", "service"].includes(payload.service_type)
     ) {
         throw new Error("Invalid service type");
     }
