@@ -18,11 +18,30 @@ import typeRoutes from "./src/routes/type-routes.js"
 
 const app = express();
 const port = 3000;
+// app.use(cors({
+//     // origin: "http://localhost:5173",
+//     // origin: "https://frontend-electricmenu.vercel.app",
+//     origin: true,
+//     credentials: true
+// }));
+
+const allowedOrigins = [
+  "https://frontend-electricmenu.vercel.app", // Domain produksi kamu
+  "http://localhost:5173"                    // Biar kamu tetep bisa ngoding lokal di laptop
+];
+
 app.use(cors({
-    // origin: "http://localhost:5173",
-    // origin: "https://frontend-electricmenu.vercel.app",
-    origin: true,
-    credentials: true
+  origin: function (origin, callback) {
+    // Izinkan request tanpa origin (seperti Postman, mobile apps, atau server-to-server)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
 }));
 
 app.use(express.json())
