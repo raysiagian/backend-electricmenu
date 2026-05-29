@@ -3,10 +3,10 @@ import {generateShopSlugify} from '../utils/generate-slug.js'
 import {generateHashID} from '../utils/generate-hash-id.js'
 import { BASE_URL,  FRONTEND_URL,  UPLOAD_PATH } from "../config/app-config.js";
 import qr from "qr-image";
-import fs from "fs";
-import path from "path"
+// import fs from "fs";
+// import path from "path"
 import { error } from 'console';
-
+import supabase from "../config/supabase.js";
 
 // private
 
@@ -110,44 +110,143 @@ export const getUserShopsService = async ({
 };
 
 // create shop
-export const createShopService = async ({user_id, shop_name}) => {
+// export const createShopService = async ({user_id, shop_name}) => {
 
-    if(!user_id || !shop_name || !shop_name.trim()) throw new Error("All field are required");
+//     if(!user_id || !shop_name || !shop_name.trim()) throw new Error("All field are required");
 
-    const result = await pool.query(
-        `INSERT INTO shops (user_id, shop_name, shop_slug, qr_url)
-        VALUES($1, $2, '', '')
-        RETURNING id`,
-        [user_id, shop_name]
-    )
+//     const result = await pool.query(
+//         `INSERT INTO shops (user_id, shop_name, shop_slug, qr_url)
+//         VALUES($1, $2, '', '')
+//         RETURNING id`,
+//         [user_id, shop_name]
+//     )
     
 
-    const id = result.rows[0].id
+//     const id = result.rows[0].id
 
-    const shop_slug = `${generateShopSlugify(shop_name)}-${generateHashID(id)}`
+//     const shop_slug = `${generateShopSlugify(shop_name)}-${generateHashID(id)}`
+//     const shop_url = `${FRONTEND_URL}/shop/${shop_slug}`;
+//     // const qr_path = path.join(process.cwd(), UPLOAD_PATH.QR, `${shop_slug}.png`);
+//     // const qr_image = qr.imageSync(shop_url, { type: "png" });
+//     // const qr_url = `${BASE_URL}/qr/${shop_slug}.png`;
+//     // fs.writeFileSync(qr_path, qr_image);
+
+//     const qr_image = qr.imageSync(shop_url, { type: "png" });
+
+//     const fileName = `${shop_slug}.png`;
+
+//     const { error: uploadError } = await supabase.storage
+//         .from("qr-images")
+//         .upload(fileName, qr_image, {
+//             contentType: "image/png",
+//             upsert: true
+//         });
+
+//     if (uploadError) {
+//         throw new Error(uploadError.message);
+//     }
+
+//     const { data: publicUrlData } = supabase.storage
+//         .from("qr-images")
+//         .getPublicUrl(fileName);
+
+//     const qr_url = publicUrlData.publicUrl;
+
+
+//     await pool.query(
+//         `UPDATE shops
+//         SET shop_slug = $1, qr_url = $2
+//         WHERE id = $3`,
+//         [shop_slug, qr_url, id]
+//     )
+
+//     return {
+//         shop: {
+//             shop_name,
+//             shop_slug,
+//             shop_url,
+//             qr_url
+//         }
+//     };
+// }
+
+export const createShopService = async ({ user_id, shop_name }) => {
+
+    if (!user_id || !shop_name || !shop_name.trim()) {
+        throw new Error("All field are required");
+    }
+
+    // generate slug unik
+    const shop_slug = `${generateShopSlugify(shop_name)}-${Date.now()}`;
+
+    // url toko frontend
     const shop_url = `${FRONTEND_URL}/shop/${shop_slug}`;
-    const qr_path = path.join(process.cwd(), UPLOAD_PATH.QR, `${shop_slug}.png`);
+
+    // generate qr image
     const qr_image = qr.imageSync(shop_url, { type: "png" });
-    const qr_url = `${BASE_URL}/qr/${shop_slug}.png`;
-    fs.writeFileSync(qr_path, qr_image);
 
+    // console.log("qr_image type:", typeof qr_image);
+    // console.log("qr_image instanceof Buffer:", qr_image instanceof Buffer);
+    // console.log("qr_image length:", qr_image?.length);
 
-    await pool.query(
-        `UPDATE shops
-        SET shop_slug = $1, qr_url = $2
-        WHERE id = $3`,
-        [shop_slug, qr_url, id]
-    )
+    // console.log("supabase url:", process.env.SUPABASE_URL);
+    // console.log("supabase key exists:", !!process.env.SUPABASE_ANON_KEY);
+    // console.log("supabase client:", !!supabase);
 
-    return {
-        shop: {
-            shop_name,
-            shop_slug,
-            shop_url,
-            qr_url
-        }
-    };
-}
+    // nama file di supabase storage
+    const fileName = `${shop_slug}.png`;
+
+    // console.log("shop_name input:", JSON.stringify(shop_name));
+    // console.log("shop_slug:", shop_slug);
+    // console.log("fileName:", fileName);
+    // console.log("fileName hex:", Buffer.from(fileName).toString('hex'));
+    // console.log("bucket:", "qr-image");
+
+    // upload qr ke supabase storage
+    const { error: uploadError } = await supabase.storage
+        .from("qr-image")
+        .upload(fileName, qr_image, {
+            contentType: "image/png",
+            upsert: true
+        });
+
+    if (uploadError) throw new Error(uploadError.message);
+
+    
+
+    // ambil public url qr
+    const { data: publicUrlData } = supabase.storage
+        .from("qr-image")
+        .getPublicUrl(fileName);
+
+    const qr_url = publicUrlData.publicUrl;
+
+    // simpan ke database
+    
+    try {
+        const result = await pool.query(
+            `INSERT INTO shops (user_id, shop_name, shop_slug, qr_url)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id`,
+            [user_id, shop_name, shop_slug, qr_url]
+        );
+
+        return {
+            shop: {
+                id: result.rows[0].id,
+                shop_name,
+                shop_slug,
+                shop_url,
+                qr_url
+            }
+        };
+
+    } catch (err) {
+        await supabase.storage.from("qr-image").remove([fileName]);
+        throw dbError;
+    }
+    
+};
 
 // edit shop
 
