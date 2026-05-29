@@ -7,4 +7,5 @@ export const UPLOAD_PATH = {
     PRODUCT: "uploads/product_image"
 };
 
-export const FRONTEND_URL = "http://localhost:5173";
+// export const FRONTEND_URL = "http://localhost:5173";
+export const FRONTEND_URL = process.env.FRONTEND_URL || "https://frontend-electricmenu.vercel.app";
