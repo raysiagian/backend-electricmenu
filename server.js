@@ -25,24 +25,34 @@ const port = 3000;
 //     credentials: true
 // }));
 
-const allowedOrigins = [
-  "https://frontend-electricmenu.vercel.app", // Domain produksi kamu
-  "http://localhost:5173"                    // Biar kamu tetep bisa ngoding lokal di laptop
-];
+// const allowedOrigins = [
+//   "https://frontend-electricmenu.vercel.app", // Domain produksi kamu
+//   "http://localhost:5173"                    // Biar kamu tetep bisa ngoding lokal di laptop
+// ];
+
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     // Izinkan request tanpa origin (seperti Postman, mobile apps, atau server-to-server)
+//     if (!origin) return callback(null, true);
+    
+//     if (allowedOrigins.indexOf(origin) !== -1) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true
+// }));
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Izinkan request tanpa origin (seperti Postman, mobile apps, atau server-to-server)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: [
+    "https://frontend-electricmenu.vercel.app", 
+    "http://localhost:5173"
+  ],
   credentials: true
 }));
+
+app.options('*', cors());
 
 app.use(express.json())
 app.use("/qr", express.static("uploads/qr_image"));
