@@ -2,9 +2,10 @@ import pool from '../config/db.js'
 import {generateProductSlugify} from '../utils/generate-slug.js'
 import {generateHashID} from '../utils/generate-hash-id.js'
 import { BASE_URL,  UPLOAD_PATH } from "../config/app-config.js";
-import path from "path"
-import fs from "fs"
+// import path from "path"
+// import fs from "fs"
 import { error } from 'console';
+import supabase from "../config/supabase.js";
 
 // private
 
@@ -439,11 +440,29 @@ export const createProductService = async ({
 
 
     // PREPARE FILE
-    const uploadDir = path.join(process.cwd(), UPLOAD_PATH.PRODUCT);
+    // const uploadDir = path.join(process.cwd(), UPLOAD_PATH.PRODUCT);
 
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    // if (!fs.existsSync(uploadDir)) {
+    //     fs.mkdirSync(uploadDir, { recursive: true });
+    // }
+
+    // const mimeToExt = {
+    //     "image/png": "png",
+    //     "image/jpeg": "jpeg",
+    //     "image/jpg": "jpg"
+    // };
+
+    // const ext = mimeToExt[file.mimetype];
+
+    // // temporary id untuk nama file (timestamp dulu)
+    // const tempName = Date.now();
+
+    // const fileName = `product-${tempName}.${ext}`;
+    // const filePath = path.join(uploadDir, fileName);
+
+    // fs.writeFileSync(filePath, file.buffer);
+
+    // const product_image_url = `${BASE_URL}/product/${fileName}`;
 
     const mimeToExt = {
         "image/png": "png",
@@ -453,15 +472,24 @@ export const createProductService = async ({
 
     const ext = mimeToExt[file.mimetype];
 
-    // temporary id untuk nama file (timestamp dulu)
-    const tempName = Date.now();
+    const fileName = `product-${Date.now()}.${ext}`;
 
-    const fileName = `product-${tempName}.${ext}`;
-    const filePath = path.join(uploadDir, fileName);
+    const { error: uploadError } = await supabase.storage
+        .from("product-image")
+        .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+        });
 
-    fs.writeFileSync(filePath, file.buffer);
+    if (uploadError) {
+        throw new Error(uploadError.message);
+    }
 
-    const product_image_url = `${BASE_URL}/product/${fileName}`;
+    const { data: publicUrlData } = supabase.storage
+        .from("product-image")
+        .getPublicUrl(fileName);
+
+    const product_image_url = publicUrlData.publicUrl;
 
     // INSERT (SUDAH ADA IMAGE)
     const result = await pool.query(

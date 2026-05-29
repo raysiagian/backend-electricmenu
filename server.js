@@ -4,7 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import pool from "./src/config/db.js"
-
+import supabase from "./src/config/supabase.js"
 
 // routes
 import authRoutes from "./src/routes/auth-routes.js"
@@ -44,6 +44,18 @@ app.get("/", async (req, res) => {
         console.error(err);
         res.status(500).send("Database error");
     }
+});
+
+app.get("/db-test", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message,
+    });
+  }
 });
 
 // api routes
