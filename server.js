@@ -19,7 +19,8 @@ import typeRoutes from "./src/routes/type-routes.js"
 const app = express();
 const port = 3000;
 app.use(cors({
-    origin: "http://localhost:5173",
+    // origin: "http://localhost:5173",
+    origin: "https://frontend-electricmenu.vercel.app",
     credentials: true
 }));
 
